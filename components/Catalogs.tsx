@@ -13,8 +13,8 @@ export default function Catalogs() {
     ];
 
     return (
-        <section className="w-full py-20 bg-ac-sand/20 text-ac-taupe">
-            <div className="container mx-auto px-6 md:px-12 text-center">
+        <div className="w-full mt-8 md:mt-12 text-ac-sand">
+            <div className="text-center">
                 <motion.h2
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -36,13 +36,13 @@ export default function Catalogs() {
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, delay: index * 0.1 }}
                             viewport={{ once: true }}
-                            className="px-8 py-4 min-w-[240px] border border-ac-taupe rounded text-ac-taupe text-sm uppercase tracking-widest hover:bg-ac-taupe hover:text-ac-sand transition-colors duration-300 flex justify-center items-center bg-transparent"
+                            className="px-8 py-4 min-w-[240px] border border-ac-sand rounded text-ac-sand text-sm uppercase tracking-widest hover:bg-ac-sand hover:text-ac-taupe transition-colors duration-300 flex justify-center items-center bg-transparent"
                         >
                             {catalog.name}
                         </motion.a>
                     ))}
                 </div>
             </div>
-        </section>
+        </div>
     );
 }

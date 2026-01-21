@@ -23,7 +23,7 @@ export default function Contact() {
     const t = useTranslations('Contact');
 
     return (
-        <section id="contact" className="w-full flex flex-col md:flex-row min-h-[600px]">
+        <section id="contact" className="w-full flex flex-col md:flex-row min-h-[600px] scroll-mt-28">
             {/* Left: Editorial Image */}
             <div className="w-full md:w-1/2 relative min-h-[400px] md:min-h-full">
                 <div className="absolute inset-0 bg-ac-taupe/20 z-10" />
@@ -35,7 +35,7 @@ export default function Contact() {
             </div>
 
             {/* Right: Contact Content */}
-            <div className="w-full md:w-1/2 bg-ac-taupe text-ac-sand flex flex-col justify-center items-center p-12 md:p-24 relative">
+            <div className="w-full md:w-1/2 bg-ac-taupe text-ac-sand flex flex-col justify-center items-center p-6 md:p-12 relative">
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     whileInView={{ opacity: 1, x: 0 }}
@@ -55,7 +55,7 @@ export default function Contact() {
                     </p>
 
                     <a
-                        href="https://calendly.com/ridarcos/30min"
+                        href="https://calendly.com/fashionstylist-ac/30min"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block px-8 py-3 border border-ac-sand text-ac-sand font-sans text-xs uppercase tracking-[0.2em] hover:bg-ac-sand hover:text-ac-taupe transition-all duration-300 mb-12"

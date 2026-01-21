@@ -49,7 +49,7 @@ export default function Navbar() {
                 className={cn(
                     "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
                     isScrolled
-                        ? "bg-white/95 backdrop-blur-md py-4 shadow-sm text-ac-charcoal"
+                        ? "bg-white/95 backdrop-blur-md py-4 shadow-sm text-ac-taupe"
                         : "bg-transparent py-6 text-white"
                 )}
             >
@@ -57,12 +57,20 @@ export default function Navbar() {
                     {/* Logo */}
                     {/* Logo */}
                     <Link href="/" className="z-50 relative group flex items-center gap-4">
-                        <img
-                            src="/logo.png"
-                            alt="The AC Style"
-                            className={`h-12 w-auto transition-all duration-300 ${isScrolled ? 'brightness-0 invert-0' : 'brightness-0 invert'}`}
+                        <div
+                            className={`h-12 w-12 transition-all duration-300 ${isScrolled ? 'bg-ac-taupe' : 'bg-white'}`}
+                            style={{
+                                maskImage: "url('/logo.png')",
+                                WebkitMaskImage: "url('/logo.png')",
+                                maskSize: "contain",
+                                WebkitMaskSize: "contain",
+                                maskRepeat: "no-repeat",
+                                WebkitMaskRepeat: "no-repeat",
+                                maskPosition: "center",
+                                WebkitMaskPosition: "center"
+                            }}
                         />
-                        <span className={`font-serif text-xl tracking-widest uppercase transition-colors duration-300 ${isScrolled ? 'text-ac-taupe' : 'text-white'}`}>
+                        <span className={`font-serif text-xl font-bold tracking-widest uppercase transition-colors duration-300 ${isScrolled ? 'text-ac-taupe' : 'text-white'}`}>
                             AC Styling
                         </span>
                     </Link>
@@ -83,7 +91,7 @@ export default function Navbar() {
                             </a>
                         ))}
                         <div className="z-50 relative">
-                            <LanguageSwitcher />
+                            <LanguageSwitcher isScrolled={isScrolled} />
                         </div>
                     </div>
 
@@ -126,7 +134,7 @@ export default function Navbar() {
                                 </motion.a>
                             ))}
                             <div className="pt-8">
-                                <LanguageSwitcher />
+                                <LanguageSwitcher isScrolled={false} />
                             </div>
                         </div>
                     </motion.div>

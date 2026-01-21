@@ -25,7 +25,7 @@ export default function Hero() {
             <div className="absolute inset-0 bg-black/50" />
 
             {/* Content Container - Centered */}
-            <div className="relative z-10 container mx-auto px-6 h-full flex flex-col justify-center items-center text-center">
+            <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center items-center text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -39,7 +39,7 @@ export default function Hero() {
 
                     {/* Main Headline */}
                     <h1
-                        className="font-serif text-5xl md:text-7xl lg:text-8xl leading-none mb-8 text-white"
+                        className="font-serif text-3xl md:text-6xl lg:text-7xl leading-none mb-4 text-white"
                         style={{ fontFamily: 'var(--font-didot), serif' }}
                     >
                         {t('headline')} <br />
@@ -47,13 +47,13 @@ export default function Hero() {
                     </h1>
 
                     {/* Subheadline */}
-                    <p className="font-sans text-base md:text-lg text-white/90 max-w-xl leading-relaxed mb-10 font-light">
+                    <p className="font-sans text-base md:text-lg text-white/90 max-w-xl leading-relaxed mb-6 font-light">
                         {t('subheadline')}
                     </p>
 
                     {/* Button - Transparent with Border */}
                     <a
-                        href="https://calendly.com/ridarcos/30min"
+                        href="https://calendly.com/fashionstylist-ac/30min"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block px-10 py-4 border border-white text-white font-sans text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all duration-300"

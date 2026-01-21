@@ -21,9 +21,9 @@ export default function Footer() {
     const t = useTranslations('Footer');
 
     return (
-        <footer className="w-full bg-ac-taupe text-ac-sand py-20 px-6 md:px-12">
+        <footer className="w-full bg-ac-taupe text-ac-sand py-8 px-4 md:px-12">
             <div className="container mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
                     {/* Column 1: Brand */}
                     <div className="flex flex-col space-y-4">
@@ -69,7 +69,7 @@ export default function Footer() {
                 </div>
 
                 {/* Copyright */}
-                <div className="mt-20 border-t border-ac-sand/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-ac-sand/40">
+                <div className="mt-8 border-t border-ac-sand/10 pt-6 flex flex-col md:flex-row justify-between items-center text-xs text-ac-sand/40">
                     <p>&copy; {new Date().getFullYear()} The AC Style. {t('rights')}</p>
                     <div className="flex space-x-6 mt-4 md:mt-0">
                         <a href="#" className="hover:text-ac-sand">Privacy Policy</a>
