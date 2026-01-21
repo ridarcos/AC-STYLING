@@ -1,0 +1,73 @@
+{
+    "Navbar": {
+        "about": "About",
+        "services": "Services",
+        "contact": "Contact"
+    },
+    "Hero": {
+        "label": "Personal Styling & Editorial",
+        "headline": "Style, Confidence,",
+        "headline_accent": "YOU.",
+        "subheadline": "Where your style communicates your essence. Elevate your presence with a wardrobe that speaks before you say a word.",
+        "cta": "Book Intro Session"
+    },
+    "About": {
+        "title": "Style Crafters to Communicate",
+        "title_accent": "your Personal Essence",
+        "description": "AC Styling is your go-to destination for personalized styling experiences. We empower individuals to embrace their uniqueness by curating custom looks that reflect their true essence. With a passion for fashion and a keen eye for detail, we strive to deliver exceptional style solutions tailored to each client’s preferences, needs and personality.",
+        "cta": "Book Intro Session"
+    },
+    "Services": {
+        "section_title": "Our Expertise",
+        "headline": "Styling Services",
+        "personal_stylist": {
+            "title": "Personal Stylist",
+            "description": "Elevate your wardrobe with a stylist who helps refine your look and build outfits that match your lifestyle."
+        },
+        "personal_shopping": {
+            "title": "Personal Shopping",
+            "description": "Skip the stress — we'll curate pieces that fit your style, shape, and budget, online or in-store."
+        },
+        "closet_detox": {
+            "title": "Closet Detox",
+            "description": "Declutter and organize your closet. We'll help decide what to keep, tailor, or let go with ease."
+        },
+        "corporate_consulting": {
+            "title": "Corporate Consulting",
+            "description": "Enhance your team's presence through dress code strategy, styling support, and image workshops."
+        },
+        "learn_more": "Learn More"
+    },
+    "Catalogs": {
+        "title": "Download our Catalogs",
+        "online": "Online Services",
+        "in_person": "In-Person Services",
+        "corporate": "Corporate"
+    },
+    "Testimonials": {
+        "title": "Testimonials",
+        "t1": {
+            "text": "I recently had my baby and changed jobs. AC Styling gave my closet a refresh for my new lifestyle. I now dress for whatever the day brings without losing my own self"
+        },
+        "t2": {
+            "text": "Alejandra helped me to not lose my style while I make the transition into the professional world. Now I feel that I bring my true self to the workplace"
+        },
+        "t3": {
+            "text": "Alejandra built me a summer closet with easy to combine pieces and pre-made outfits. Helps me to not think about what I wear and still get approval nods from the wife."
+        }
+    },
+    "Contact": {
+        "label": "Get in Touch",
+        "title": "Elevate Your Style",
+        "description": "Ready to define your personal brand? Contact us to schedule a consultation or learn more about our editorial styling services.",
+        "cta": "Book Intro Session"
+    },
+    "Footer": {
+        "tagline": "Ready to be seen?",
+        "subtagline": "Let your style do the talking.",
+        "explore": "Explore",
+        "studios": "Studios",
+        "connect": "Connect",
+        "rights": "All Rights Reserved."
+    }
+}

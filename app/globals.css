@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  /* Official AC Styling Palette */
+  --color-ac-taupe: #5A4F44;
+  /* Deep Taupe - Core Identity */
+  --color-ac-beige: #C4B29F;
+  /* Warm Beige - Foundation */
+  --color-ac-sand: #E6DED6;
+  /* Creamy Sand - Highlights/Balance */
+
+  /* Secondary & Accents */
+  --color-ac-coffee: #8C847B;
+  /* Gray Coffee */
+  --color-ac-olive: #7F8968;
+  /* Muted Olive */
+  --color-ac-olive-dark: #4B5320;
+  /* Dark Olive */
+
+  /* Utility Colors */
+  --color-ac-charcoal: #1A1A1A;
+  --color-ac-charcoal-light: #333333;
+  --color-ac-white: #FFFFFF;
+
+  --font-serif: var(--font-playfair), serif;
+  --font-sans: var(--font-inter), sans-serif;
+
+  --background-image-gradient-hero: linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0) 100%);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-ac-sand);
+    color: var(--color-ac-taupe);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
