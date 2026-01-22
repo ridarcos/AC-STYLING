@@ -11,14 +11,29 @@ export default function Hero() {
     return (
         <section className="relative w-full h-screen overflow-hidden bg-black text-white">
             {/* Background Image */}
+            {/* Background Image */}
             <div className="absolute inset-0 w-full h-full">
-                <Image
-                    src="/hero-manu.png"
-                    alt="The AC Style - Refined Elegance"
-                    fill
-                    className="object-cover object-[65%_center] md:object-center"
-                    priority
-                />
+                {/* Mobile Background: AC Photo 4 */}
+                <div className="block md:hidden w-full h-full relative">
+                    <Image
+                        src="/ac photo 4.jpeg"
+                        alt="The AC Style - Mobile"
+                        fill
+                        className="object-cover object-center"
+                        priority
+                    />
+                </div>
+
+                {/* Desktop Background: Hero Manu */}
+                <div className="hidden md:block w-full h-full relative">
+                    <Image
+                        src="/hero-manu.png"
+                        alt="The AC Style - Refined Elegance"
+                        fill
+                        className="object-cover object-center"
+                        priority
+                    />
+                </div>
             </div>
 
             {/* Dark Overlay - Critical for Contrast */}
