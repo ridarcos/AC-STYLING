@@ -1,7 +1,7 @@
 
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
-import { ArrowLeft, Layers } from "lucide-react";
+import { ArrowLeft, Layers, Check } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function FoundationsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -17,8 +17,11 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
         .select('*')
         .order('order_index', { ascending: true });
 
-
-
+    // 2. Fetch all chapters for these masterclasses to calculate completion
+    const { data: mcChapters } = await supabase
+        .from('chapters')
+        .select('id, slug, masterclass_id')
+        .not('masterclass_id', 'is', null);
 
     // User Progress Logic
     const completedChapters = new Set();
@@ -29,12 +32,22 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
             .eq('user_id', user.id);
 
         progress?.forEach(p => {
-            if (p.content_id.startsWith('foundations/')) {
-                const slug = p.content_id.split('/')[1];
-                completedChapters.add(slug);
-            }
+            // content_id format: "foundations/chapter-slug" or just "chapter-slug" depending on implementation
+            // The logic in CoursesPage checks for "foundations/" prefix.
+            // Let's allow flexibility.
+            const parts = p.content_id.split('/');
+            const slug = parts.length > 1 ? parts[1] : parts[0];
+            completedChapters.add(slug);
         });
     }
+
+    // Helper to check if masterclass is complete
+    const isMasterclassComplete = (mcId: string) => {
+        if (!mcChapters) return false;
+        const chaptersForMc = mcChapters.filter(c => c.masterclass_id === mcId);
+        if (chaptersForMc.length === 0) return false; // Empty masterclass not "complete"
+        return chaptersForMc.every(c => completedChapters.has(c.slug));
+    };
 
     // Default Images (Fallback)
     const defaultImages = {
@@ -68,37 +81,50 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {masterclasses.map((mc, index) => (
-                            <Link href={`/vault/foundations/masterclass/${mc.id}`} key={mc.id} className="group block relative">
-                                <div className="relative aspect-[16/9] overflow-hidden rounded-sm mb-4 shadow-md group-hover:shadow-xl transition-all duration-500">
-                                    <div className="absolute inset-0 bg-ac-taupe/20 group-hover:bg-ac-taupe/0 transition-colors z-10" />
-                                    <img
-                                        src={mc.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
-                                        alt={mc.title}
-                                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
-                                    />
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full border border-white/40 text-white font-serif tracking-widest">
-                                            VIEW COLLECTION
+                        {masterclasses.map((mc, index) => {
+                            const isCompleted = isMasterclassComplete(mc.id);
+
+                            return (
+                                <Link href={`/vault/foundations/masterclass/${mc.id}`} key={mc.id} className="group block relative">
+                                    <div className="relative aspect-[16/9] overflow-hidden rounded-sm mb-4 shadow-md group-hover:shadow-xl transition-all duration-500">
+                                        <div className="absolute inset-0 bg-ac-taupe/20 group-hover:bg-ac-taupe/0 transition-colors z-10" />
+                                        <img
+                                            src={mc.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
+                                            alt={mc.title}
+                                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                                            <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full border border-white/40 text-white font-serif tracking-widest">
+                                                VIEW COLLECTION
+                                            </div>
+                                        </div>
+
+                                        {/* Badge - Label */}
+                                        <div className="absolute top-4 left-4 z-30">
+                                            <span className="bg-ac-gold text-white text-[10px] uppercase font-bold px-3 py-1 tracking-widest rounded-sm">
+                                                Masterclass {index + 1}
+                                            </span>
+                                        </div>
+
+                                        {/* Completion Badge (Top Right) */}
+                                        <div className="absolute top-4 right-4 z-30">
+                                            {isCompleted && (
+                                                <div className="w-8 h-8 rounded-full bg-ac-olive flex items-center justify-center shadow-md ring-1 ring-white/20">
+                                                    <Check size={16} className="text-ac-gold" />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Badge */}
-                                    <div className="absolute top-4 left-4 z-30">
-                                        <span className="bg-ac-gold text-white text-[10px] uppercase font-bold px-3 py-1 tracking-widest rounded-sm">
-                                            Masterclass {index + 1}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <h3 className="font-serif text-3xl text-ac-taupe group-hover:text-ac-olive transition-colors mb-2">
-                                    {mc.title}
-                                </h3>
-                                <p className="text-ac-taupe/60 text-sm max-w-md line-clamp-2 md:line-clamp-none">
-                                    {mc.description}
-                                </p>
-                            </Link>
-                        ))}
+                                    <h3 className="font-serif text-3xl text-ac-taupe group-hover:text-ac-olive transition-colors mb-2">
+                                        {mc.title}
+                                    </h3>
+                                    <p className="text-ac-taupe/60 text-sm max-w-md line-clamp-2 md:line-clamp-none">
+                                        {mc.description}
+                                    </p>
+                                </Link>
+                            );
+                        })}
                     </div>
                 </div>
             )}

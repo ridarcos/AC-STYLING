@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import VaultHero from "@/components/vault/VaultHero";
 import QuickActions from "@/components/vault/QuickActions";
 import WhatsNew from "@/components/vault/WhatsNew";
-import { getDashboardPulse } from "@/app/actions/dashboard";
+import { getDashboardPulse, getMasterclassCompletionStatus } from "@/app/actions/dashboard";
 
 export default async function VaultPage() {
     const supabase = await createClient();
@@ -14,9 +14,10 @@ export default async function VaultPage() {
     }
 
     // Fetch profile and dynamic content concurrently
-    const [profileRes, pulse] = await Promise.all([
+    const [profileRes, pulse, completion] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', user.id).single(),
-        getDashboardPulse()
+        getDashboardPulse(),
+        getMasterclassCompletionStatus()
     ]);
 
     const profile = profileRes.data;
@@ -46,9 +47,8 @@ export default async function VaultPage() {
                     <WhatsNew pulse={pulse} />
                 </div>
 
-                {/* Sidebar: Quick Actions takes 1 col */}
                 <div className="lg:col-span-1">
-                    <QuickActions />
+                    <QuickActions isMasterclassComplete={completion.isComplete} />
                 </div>
             </div>
 

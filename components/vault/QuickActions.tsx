@@ -4,17 +4,22 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "@/i18n/routing";
-import { Calendar, MessageCircleQuestion, Archive, Tag } from "lucide-react";
+import { Calendar, MessageCircleQuestion, Archive, Tag, BookHeart } from "lucide-react";
 import AskAlejandraModal from "@/components/vault/AskAlejandraModal";
 
 const actions = [
     { label: "Courses", icon: Archive, href: "/vault/courses", action: null },
     { label: "Book a Service", icon: Calendar, href: "#book", action: null },
     { label: "The Boutique", icon: Tag, href: "/vault/boutique", action: null },
+    { label: "My Styling Essence", icon: BookHeart, href: "/vault/essence", action: null },
     { label: "Ask Ale a Question", icon: MessageCircleQuestion, href: "#", action: "ask" },
 ];
 
-export default function QuickActions() {
+interface QuickActionsProps {
+    isMasterclassComplete?: boolean;
+}
+
+export default function QuickActions({ isMasterclassComplete = false }: QuickActionsProps) {
     const [isAskModalOpen, setIsAskModalOpen] = useState(false);
 
     const handleActionClick = (actionType: string | null, e: React.MouseEvent) => {
@@ -34,7 +39,7 @@ export default function QuickActions() {
             */}
             <div className="grid grid-cols-2 lg:flex lg:flex-col gap-4 h-full">
 
-                {/* 1. Permanent Collection (Primary Action) */}
+                {/* 1. Permanent Collection (Primary Action) - UPDATED STYLE */}
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -43,23 +48,23 @@ export default function QuickActions() {
                 >
                     <Link
                         href="/vault/foundations"
-                        className="group relative flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-start 
+                        className={`group relative flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-start 
                                     p-6 lg:p-4 rounded-sm
-                                    bg-ac-taupe text-white shadow-md
-                                    hover:bg-ac-taupe/90 hover:shadow-lg transition-all duration-300
-                                    overflow-hidden lg:h-24 lg:w-full block h-full w-full"
+                                    border border-ac-sand shadow-sm
+                                    bg-white/40 backdrop-blur-md
+                                    hover:bg-ac-taupe/5 hover:shadow-md transition-all duration-300
+                                    overflow-hidden lg:h-24 lg:w-full block h-full w-full`}
                     >
-                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <Archive
                             size={24}
-                            className="text-ac-gold mb-3 lg:mb-0 lg:mr-4 transition-transform duration-300 group-hover:scale-110"
+                            className="text-ac-taupe mb-3 lg:mb-0 lg:mr-4 transition-transform duration-300 group-hover:scale-110"
                         />
                         <div className="text-center lg:text-left">
-                            <span className="block font-serif text-lg lg:text-xl leading-tight group-hover:text-ac-beige transition-colors">
-                                Masterclass
+                            <span className="block font-serif text-lg lg:text-xl leading-tight text-ac-taupe group-hover:text-ac-taupe/80 transition-colors">
+                                Masterclasses
                             </span>
-                            <span className="text-[10px] uppercase tracking-widest text-ac-sand/60">
-                                Foundations Module
+                            <span className="text-[10px] uppercase tracking-widest text-ac-taupe/60 font-bold">
+                                Styling Foundations
                             </span>
                         </div>
                     </Link>

@@ -90,3 +90,70 @@ export async function getEssenceProgress(masterclassId: string) {
 
     return responseMap;
 }
+
+/**
+ * Fetches ALL essence responses for the user, grouped by Masterclass -> Chapter.
+ * Used for the "My Styling Essence" journal page.
+ */
+export async function getAllEssenceData() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    // Fetch responses with related masterclass and chapter data
+    // Note: We need to handle the case where chapter_slug might not directly link to a chapter ID easily 
+    // without a join, but we stored chapter_slug text. 
+    // Ideally we join on masterclass_id to get the Masterclass Title.
+
+    const { data, error } = await supabase
+        .from('essence_responses')
+        .select(`
+            question_key,
+            answer_value,
+            chapter_slug,
+            updated_at,
+            masterclass:masterclasses (
+                id,
+                title
+            )
+        `)
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+    if (error) {
+        console.error("Fetch All Essence Error:", error);
+        return null;
+    }
+
+    // Grouping Logic
+    // Structure: 
+    // [
+    //   { 
+    //     masterclassTitle: "Foundations", 
+    //     entries: [ { question: "...", answer: "...", date: "..." } ] 
+    //   }
+    // ]
+
+    const grouped: Record<string, { title: string, entries: any[] }> = {};
+
+    data?.forEach((row: any) => {
+        const mcTitle = row.masterclass?.title || "General Styling";
+        const mcId = row.masterclass?.id || "general";
+
+        if (!grouped[mcId]) {
+            grouped[mcId] = { title: mcTitle, entries: [] };
+        }
+
+        grouped[mcId].entries.push({
+            question_key: row.question_key,
+            // Since answer_value is JSONB, we might need to parse or use directly. 
+            // For now assuming it's a string or simple object.
+            answer_value: row.answer_value,
+            chapter_slug: row.chapter_slug,
+            updated_at: row.updated_at
+        });
+    });
+
+    return Object.values(grouped);
+}

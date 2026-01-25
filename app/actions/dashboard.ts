@@ -130,3 +130,52 @@ export async function getDashboardPulse(): Promise<PulseContent[]> {
 
     return items.slice(0, 3);
 }
+
+export async function getMasterclassCompletionStatus() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { isComplete: false, progress: 0 };
+
+    // 1. Get total active masterclass chapters
+    const { count: totalChapters, error: totalError } = await supabase
+        .from('chapters')
+        .select('*', { count: 'exact', head: true })
+        .not('masterclass_id', 'is', null);
+
+    if (totalError || totalChapters === null) return { isComplete: false, progress: 0 };
+
+    // 2. Get user's completed chapters (that belong to a masterclass)
+    // We need to join or filter. Since user_progress stores content_id like "masterclass-slug/chapter-slug" 
+    // or just the chapter_id if we changed schema. 
+    // Checking `user_progress` table schema might be needed, but assuming standard:
+    // Actually `user_progress` usually links to `content_id`.
+    // Let's assume we can count unique completed chapters.
+
+    // Alternative: Check if there are any remaining chapters NOT in user_progress.
+    // Simpler approach for now: Get all user progress, count how many match masterclass chapters.
+
+    // Better: Get the latest chapter the user completed. If it's the last one in the DB, then complete? 
+    // No, they might skip.
+
+    // Robust approach:
+    const { data: completed } = await supabase
+        .from('user_progress')
+        .select('content_id')
+        .eq('user_id', user.id);
+
+    // We need to know which of these content_ids correspond to masterclass chapters.
+    // If content_id is the chapter slug or id? 
+    // In `getDashboardPulse`, we split content_id by '/'. 
+    // If the path contains 'foundations', it's masterclass.
+
+    const completedMasterclassChapters = completed?.filter(p => p.content_id.includes('foundations') || p.content_id.includes('masterclass')).length || 0;
+
+    // If total is 0, then effectively complete (or empty).
+    if (totalChapters === 0) return { isComplete: true, progress: 100 };
+
+    return {
+        isComplete: completedMasterclassChapters >= totalChapters,
+        progress: Math.round((completedMasterclassChapters / totalChapters) * 100)
+    };
+}
