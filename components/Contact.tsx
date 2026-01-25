@@ -23,14 +23,14 @@ export default function Contact() {
     const t = useTranslations('Contact');
 
     return (
-        <section id="contact" className="w-full flex flex-col md:flex-row min-h-[600px] scroll-mt-28">
+        <section id="contact" className="w-full flex flex-col md:flex-row min-h-[450px] scroll-mt-28">
             {/* Left: Editorial Image */}
             <div className="w-full md:w-1/2 relative min-h-[400px] md:min-h-full">
                 <div className="absolute inset-0 bg-ac-taupe/20 z-10" />
                 <img
-                    src="/hero-bg-young.png"
+                    src="/ac-photo-5.jpeg"
                     alt="AC Styling Editorial"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                 />
             </div>
 

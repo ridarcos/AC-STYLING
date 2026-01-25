@@ -5,11 +5,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const TrustedBy = () => {
-    // Generate array of 12 partner items
-    const originalPartners = Array.from({ length: 12 }, (_, i) => ({
-        id: i + 1,
-        src: `/partner ${i + 1}.png`,
-        alt: `Partner ${i + 1}`,
+    // Generate array of 12 partner items with specific order
+    const partnerOrder = [12, 2, 5, 6, 8, 1, 3, 4, 7, 9, 10, 11];
+
+    const originalPartners = partnerOrder.map((id) => ({
+        id,
+        src: `/partner ${id}.png`,
+        alt: `Partner ${id}`,
     }));
 
     // Duplicate the array to create a seamless loop

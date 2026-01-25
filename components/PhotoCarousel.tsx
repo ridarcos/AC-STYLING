@@ -6,9 +6,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 
 const images = [
+    "/ac photo 3.jpg",
+    "/ac photo 6.jpeg",
     "/ac photo 1.jpg",
     "/ac photo 2.jpg",
-    "/ac photo 3.jpg"
+    "/ac photo 7.jpg"
 ];
 
 export default function PhotoCarousel() {
