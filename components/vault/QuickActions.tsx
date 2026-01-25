@@ -8,9 +8,9 @@ import { Calendar, MessageCircleQuestion, Archive, Tag } from "lucide-react";
 import AskAlejandraModal from "@/components/vault/AskAlejandraModal";
 
 const actions = [
-    { label: "Courses", icon: Archive, href: "#courses", action: null },
+    { label: "Courses", icon: Archive, href: "/vault/courses", action: null },
     { label: "Book a Service", icon: Calendar, href: "#book", action: null },
-    { label: "Brand Index", icon: Tag, href: "#brands", action: null },
+    { label: "The Boutique", icon: Tag, href: "/vault/boutique", action: null },
     { label: "Ask Ale a Question", icon: MessageCircleQuestion, href: "#", action: "ask" },
 ];
 

@@ -1,3 +1,4 @@
+
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft, FileText, CheckCircle2, Download } from "lucide-react";
@@ -7,7 +8,7 @@ import EssenceLab from "@/components/vault/EssenceLab";
 import MarkComplete from "@/components/vault/MarkComplete";
 import { createClient } from "@/utils/supabase/server";
 
-export default async function LessonPage({ params }: { params: Promise<{ slug: string; locale: string }> }) {
+export default async function CourseLessonPage({ params }: { params: Promise<{ slug: string; locale: string }> }) {
     const { slug, locale } = await params;
     // Decode likely URL-encoded slugs from legacy data
     const decodedSlug = decodeURIComponent(slug);
@@ -21,34 +22,16 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         .single();
 
     if (chapterError || !chapter) {
-        redirect('/vault/foundations');
-    }
-
-    // Determine Next Chapter Logic
-    let nextChapterSlug: string | null = null;
-
-    // Logic: Find the chapter with the NEXT order_index in the same group
-    if (chapter.masterclass_id) {
-        const { data: next } = await supabase
-            .from('chapters')
-            .select('slug')
-            .eq('masterclass_id', chapter.masterclass_id)
-            .gt('order_index', chapter.order_index)
-            .order('order_index', { ascending: true })
-            .limit(1)
-            .single();
-        if (next) nextChapterSlug = next.slug;
-    } else if (chapter.is_standalone) {
-        // Standalone flow: find next standalone chapter
-        const { data: next } = await supabase
-            .from('chapters')
-            .select('slug')
-            .eq('is_standalone', true)
-            .gt('order_index', chapter.order_index)
-            .order('order_index', { ascending: true })
-            .limit(1)
-            .single();
-        if (next) nextChapterSlug = next.slug;
+        console.error("CoursePage: Chapter not found", { slug, decodedSlug, error: chapterError });
+        return (
+            <div className="p-20 text-center">
+                <h1 className="text-2xl font-serif text-ac-taupe mb-4">Course Not Found</h1>
+                <p className="text-ac-taupe/60 mb-8">The requested course "{decodedSlug}" could not be located.</p>
+                <Link href="/vault/courses" className="px-6 py-3 bg-ac-taupe text-white rounded-sm">
+                    Return to Courses
+                </Link>
+            </div>
+        );
     }
 
     const labQuestions = chapter.lab_questions || [];
@@ -64,18 +47,18 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
     // Fetch Essence Lab Answers
     let essenceMap: Record<string, string> = {};
     if (user) {
-        // We fetch ALL answers for this masterclass to populate the lab
-        // Note: Ideally we filter by chapter too, but the UI might show aggregate data eventually.
-        // For now, let's just fetch answers for *this* chapter's questions to match keys.
-        // Or if we want to show previous answers across chapters, we fetch by masterclass.
+        // For standalone courses, the "masterclass_id" concept is fuzzy.
+        // We can use the chapter ID itself as the grouping ID in the DB, 
+        // or a dedicated "standalone" GUID if we want a global bucket.
+        // Plan: Use Chapter ID as the "Masterclass ID" for standalone items in the DB constraint.
 
-        // Let's rely on the Server Action helper or direct query.
-        // Direct query here is efficient since we are already server-side.
+        const targetMasterclassId = chapter.id; // Treat course itself as the container
+
         const { data: answers } = await supabase
             .from('essence_responses')
             .select('question_key, answer_value')
             .eq('user_id', user.id)
-            .eq('masterclass_id', chapter.masterclass_id || chapter.id); // Fallback if no masterclass link? Ideally handle null.
+            .eq('masterclass_id', targetMasterclassId);
 
         answers?.forEach(a => {
             essenceMap[a.question_key] = a.answer_value;
@@ -88,24 +71,38 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         .from('user_progress')
         .select('*')
         .eq('user_id', user.id)
-        .eq('content_id', `foundations/${slug}`)
+        .eq('content_id', `foundations/${chapter.slug}`) // Keeping ID format consistent for now
         .single();
     isCompleted = !!progress;
 
+
+    // Calculate Next Standalone Chapter
+    let nextChapterSlug: string | null = null;
+    if (chapter.is_standalone) {
+        const { data: next } = await supabase
+            .from('chapters')
+            .select('slug')
+            .eq('is_standalone', true)
+            .gt('order_index', chapter.order_index)
+            .order('order_index', { ascending: true })
+            .limit(1)
+            .single();
+        if (next) nextChapterSlug = next.slug;
+    }
 
     return (
         <section className="min-h-screen pb-20">
             {/* Nav */}
             <div className="mb-8">
-                <Link href="/vault/foundations" className="flex items-center gap-2 text-sm uppercase tracking-widest text-ac-taupe/60 hover:text-ac-olive transition-colors mb-6 group">
+                <Link href="/vault/courses" className="flex items-center gap-2 text-sm uppercase tracking-widest text-ac-taupe/60 hover:text-ac-olive transition-colors mb-6 group">
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Collection
+                    Back to Courses
                 </Link>
                 <div className="flex items-baseline gap-4">
-                    <span className="font-serif text-5xl text-ac-taupe/20 font-bold">
-                        #
-                    </span>
                     <div>
+                        <span className="inline-block px-3 py-1 mb-2 text-xs font-bold tracking-widest uppercase bg-ac-gold/10 text-ac-gold rounded-sm">
+                            Standalone Course
+                        </span>
                         <h1 className="font-serif text-3xl md:text-5xl text-ac-taupe">
                             {chapter.title}
                         </h1>
@@ -127,22 +124,22 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
                         <div className="flex justify-between items-start">
                             <div className="prose prose-stone max-w-none flex-1">
-                                <h3 className="font-serif text-2xl text-ac-taupe mb-2">About this Chapter</h3>
+                                <h3 className="font-serif text-2xl text-ac-taupe mb-2">About this Course</h3>
                                 <div className="text-ac-taupe/80 leading-relaxed whitespace-pre-line">
-                                    {chapter.description || 'Learn the foundations of this essential style concept.'}
+                                    {chapter.description || 'Course description available.'}
                                 </div>
                             </div>
 
                             {/* Desktop Completion Button */}
                             <div className="hidden lg:block ml-6">
-                                <MarkComplete slug={slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
+                                <MarkComplete slug={chapter.slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
                             </div>
                         </div>
                     </div>
 
                     {/* Mobile Completion Button */}
                     <div className="lg:hidden">
-                        <MarkComplete slug={slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
+                        <MarkComplete slug={chapter.slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
                     </div>
                 </div>
 
@@ -165,14 +162,14 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-sm text-ac-taupe/40 italic">No takeaways added yet. Watch the lesson above to learn!</p>
+                            <p className="text-sm text-ac-taupe/40 italic">No takeaways added yet.</p>
                         )}
                     </div>
 
-                    {/* 2. Styling Essence Lab (Always show - has fallback questions) */}
+                    {/* 2. Styling Essence Lab */}
                     <EssenceLab
-                        masterclassId={chapter.masterclass_id || "standalone"} // Handle standalone case
-                        chapterSlug={slug}
+                        masterclassId={chapter.id} // Standalone: use chapter ID as masterclass ID
+                        chapterSlug={chapter.slug}
                         initialData={essenceMap}
                         questions={labQuestions}
                     />
@@ -201,7 +198,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-sm text-ac-taupe/40 italic">No resources available for this chapter yet.</p>
+                            <p className="text-sm text-ac-taupe/40 italic">No resources available.</p>
                         )}
                     </div>
                 </div>

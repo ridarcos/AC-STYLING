@@ -3,74 +3,207 @@
 import { useState, useEffect, useRef } from "react";
 import ChapterForm from "./ChapterForm";
 import ChaptersTable from "./ChaptersTable";
-import { getChapters } from "@/app/actions/admin/manage-chapters";
+import MasterclassForm from "./MasterclassForm";
+import BoutiqueManager from "./BoutiqueManager";
+import ClientList from "./ClientList";
+import ClientDossier from "./ClientDossier";
+import { getChapters, deleteChapter } from "@/app/actions/admin/manage-chapters";
+import { getMasterclasses, deleteMasterclass } from "@/app/actions/admin/manage-masterclasses";
+import { toast } from "sonner";
+import { Folder, FileVideo, Plus, Users, Tag } from "lucide-react";
 
 export default function AdminDashboard() {
+    const [activeTab, setActiveTab] = useState<'masterclasses' | 'chapters' | 'clients' | 'boutique'>('masterclasses');
+
+    // Data
     const [chapters, setChapters] = useState<any[]>([]);
-    const [editingChapter, setEditingChapter] = useState<any | null>(null);
+    const [masterclasses, setMasterclasses] = useState<any[]>([]);
+
+    // Forms & Modals
+    const [isCreating, setIsCreating] = useState(false);
+    const [editingItem, setEditingItem] = useState<any | null>(null);
+    const [selectedClient, setSelectedClient] = useState<any | null>(null);
+
     const formRef = useRef<HTMLDivElement>(null);
 
-    const loadChapters = async () => {
-        const result = await getChapters();
-        if (result.success) {
-            setChapters(result.chapters);
-        }
+    const loadData = async () => {
+        const [cRes, mRes] = await Promise.all([getChapters(), getMasterclasses()]);
+        if (cRes.success) setChapters(cRes.chapters || []);
+        if (mRes.success) setMasterclasses(mRes.masterclasses || []);
     };
 
     useEffect(() => {
-        loadChapters();
+        loadData();
     }, []);
 
     // Scroll to form when editing
     useEffect(() => {
-        if (editingChapter && formRef.current) {
+        if ((editingItem || isCreating) && formRef.current) {
             formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-    }, [editingChapter]);
+    }, [editingItem, isCreating]);
 
     const handleSuccess = () => {
-        loadChapters();
-        setEditingChapter(null);
+        loadData();
+        setEditingItem(null);
+        setIsCreating(false);
     };
 
-    const handleEdit = (chapter: any) => {
-        setEditingChapter(chapter);
+    const handleDeleteMasterclass = async (id: string, title: string) => {
+        if (!confirm(`Delete masterclass "${title}" and ALL its chapters?`)) return;
+        const res = await deleteMasterclass(id);
+        if (res.success) {
+            toast.success("Masterclass deleted");
+            loadData();
+        } else {
+            toast.error(res.error);
+        }
     };
 
     return (
-        <div className="space-y-12">
-            {/* Chapter Form */}
-            <div ref={formRef} className={`bg-white/40 backdrop-blur-md border rounded-sm p-8 transition-all ${editingChapter ? 'border-ac-gold shadow-lg' : 'border-white/30'
-                }`}>
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="font-serif text-2xl text-ac-taupe">
-                        {editingChapter ? `Editing: ${editingChapter.title}` : 'Add New Chapter'}
-                    </h2>
-                    {editingChapter && (
-                        <button
-                            onClick={() => setEditingChapter(null)}
-                            className="text-sm text-ac-taupe/60 hover:text-ac-taupe transition-colors"
-                        >
-                            Cancel Edit
-                        </button>
-                    )}
-                </div>
-                <ChapterForm
-                    chapter={editingChapter}
-                    onSuccess={handleSuccess}
-                    onCancel={editingChapter ? () => setEditingChapter(null) : undefined}
-                />
+        <div className="space-y-8">
+            {/* Tabs */}
+            <div className="flex gap-4 border-b border-ac-taupe/10 overflow-x-auto">
+                <button
+                    onClick={() => { setActiveTab('masterclasses'); setIsCreating(false); setEditingItem(null); }}
+                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'masterclasses'
+                        ? 'text-ac-taupe border-b-2 border-ac-gold'
+                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
+                        }`}
+                >
+                    <Folder size={18} />
+                    Masterclasses
+                </button>
+                <button
+                    onClick={() => { setActiveTab('chapters'); setIsCreating(false); setEditingItem(null); }}
+                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'chapters'
+                        ? 'text-ac-taupe border-b-2 border-ac-gold'
+                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
+                        }`}
+                >
+                    <FileVideo size={18} />
+                    Chapters
+                </button>
+                <button
+                    onClick={() => { setActiveTab('boutique'); setIsCreating(false); setEditingItem(null); }}
+                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'boutique'
+                        ? 'text-ac-taupe border-b-2 border-ac-gold'
+                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
+                        }`}
+                >
+                    <Tag size={18} />
+                    Boutique
+                </button>
+                <button
+                    onClick={() => { setActiveTab('clients'); setIsCreating(false); setEditingItem(null); }}
+                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'clients'
+                        ? 'text-ac-taupe border-b-2 border-ac-gold'
+                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
+                        }`}
+                >
+                    <Users size={18} />
+                    Clients
+                </button>
             </div>
 
-            {/* Chapters List */}
-            <div className="bg-white/40 backdrop-blur-md border border-white/30  rounded-sm p-8">
-                <h2 className="font-serif text-2xl text-ac-taupe mb-6">Existing Chapters</h2>
-                <ChaptersTable
-                    chapters={chapters}
-                    onEdit={handleEdit}
-                    onDelete={loadChapters}
+            {/* Action Bar (Not shown in Clients/Boutique tab usually, or different actions) */}
+            {activeTab !== 'clients' && activeTab !== 'boutique' && (
+                <div className="flex justify-between items-center">
+                    <h2 className="font-serif text-3xl text-ac-taupe">
+                        {activeTab === 'masterclasses' ? 'Masterclass Collections' : 'Video Chapters'}
+                    </h2>
+                    <button
+                        onClick={() => { setIsCreating(true); setEditingItem(null); }}
+                        className="flex items-center gap-2 bg-ac-taupe text-white px-4 py-2 rounded-sm hover:bg-ac-taupe/90 transition-colors"
+                    >
+                        <Plus size={18} />
+                        Create New
+                    </button>
+                </div>
+            )}
+
+            {/* Form Area */}
+            {(isCreating || editingItem) && activeTab !== 'clients' && activeTab !== 'boutique' && (
+                <div ref={formRef} className="bg-white/40 backdrop-blur-md border border-ac-gold shadow-lg rounded-sm p-8">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="font-serif text-xl text-ac-taupe">
+                            {editingItem ? 'Edit Item' : 'New Item'}
+                        </h3>
+                        <button onClick={() => { setIsCreating(false); setEditingItem(null); }} className="text-sm text-ac-taupe/60">Close</button>
+                    </div>
+
+                    {activeTab === 'masterclasses' ? (
+                        <MasterclassForm
+                            masterclass={editingItem}
+                            onSuccess={handleSuccess}
+                            onCancel={() => { setIsCreating(false); setEditingItem(null); }}
+                        />
+                    ) : (
+                        <ChapterForm
+                            chapter={editingItem}
+                            onSuccess={handleSuccess}
+                            onCancel={() => { setIsCreating(false); setEditingItem(null); }}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* Views */}
+            {activeTab === 'masterclasses' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {masterclasses.map((mc) => (
+                        <div key={mc.id} className="bg-white/40 backdrop-blur-sm border border-white/30 rounded-sm overflow-hidden group">
+                            <div className="aspect-video bg-ac-taupe/10 relative">
+                                {mc.thumbnail_url && (
+                                    <img src={mc.thumbnail_url} alt={mc.title} className="w-full h-full object-cover" />
+                                )}
+                                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setEditingItem(mc)} className="bg-white/90 p-2 rounded-full text-ac-olive hover:text-ac-gold shadow-sm">Edit</button>
+                                </div>
+                            </div>
+                            <div className="p-6">
+                                <h3 className="font-serif text-xl text-ac-taupe mb-1">{mc.title}</h3>
+                                <p className="text-sm text-ac-taupe/60 line-clamp-2 mb-4">{mc.description}</p>
+                                <div className="flex justify-between items-center border-t border-ac-taupe/10 pt-4">
+                                    <span className="text-xs uppercase tracking-widest text-ac-taupe/40">Includes chapters</span>
+                                    <button onClick={() => handleDeleteMasterclass(mc.id, mc.title)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {masterclasses.length === 0 && (
+                        <div className="col-span-full text-center py-12 text-ac-taupe/40 border-2 border-dashed border-ac-taupe/10 rounded-sm">
+                            No masterclasses found. Create one to group your chapters.
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'chapters' && (
+                <div className="bg-white/40 backdrop-blur-md border border-white/30 rounded-sm p-6">
+                    <ChaptersTable
+                        chapters={chapters}
+                        onEdit={(c) => setEditingItem(c)}
+                        onDelete={loadData}
+                    />
+                </div>
+            )}
+
+            {activeTab === 'clients' && (
+                <ClientList onSelectClient={(c) => setSelectedClient(c)} />
+            )}
+
+            {activeTab === 'boutique' && (
+                <BoutiqueManager />
+            )}
+
+            {/* Modal: Client Dossier */}
+            {selectedClient && (
+                <ClientDossier
+                    client={selectedClient}
+                    onClose={() => setSelectedClient(null)}
                 />
-            </div>
+            )}
         </div>
     );
 }

@@ -36,13 +36,16 @@ export async function createChapter(formData: FormData) {
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
     const category = formData.get('category') as string || 'masterclass';
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
+    const masterclassId = formData.get('masterclassId') as string || null;
+    // If masterclassId is present, it's NOT standalone. If absent, check explicit toggle or default to true.
+    const isStandalone = masterclassId ? false : (formData.get('isStandalone') === 'true');
 
     // Parse JSON fields
     const labQuestions = JSON.parse(formData.get('labQuestions') as string || '[]');
     const takeaways = JSON.parse(formData.get('takeaways') as string || '[]');
     const resourceUrls = JSON.parse(formData.get('resourceUrls') as string || '[]');
 
-    // Insert chapter
+    // Insert chapter with all data
     const { data: chapter, error: chapterError } = await supabase
         .from('chapters')
         .insert({
@@ -53,7 +56,12 @@ export async function createChapter(formData: FormData) {
             video_id: videoId,
             thumbnail_url: thumbnailUrl,
             category,
-            order_index: orderIndex
+            order_index: orderIndex,
+            masterclass_id: masterclassId,
+            is_standalone: isStandalone,
+            lab_questions: labQuestions,
+            takeaways: takeaways,
+            resource_urls: resourceUrls
         })
         .select()
         .single();
@@ -63,25 +71,10 @@ export async function createChapter(formData: FormData) {
         return { success: false, error: chapterError.message };
     }
 
-    // Insert metadata
-    const { error: metadataError } = await supabase
-        .from('lesson_metadata')
-        .insert({
-            chapter_id: chapter.id,
-            lab_questions: labQuestions,
-            takeaways: takeaways,
-            resource_urls: resourceUrls
-        });
-
-    if (metadataError) {
-        console.error("Metadata creation error:", metadataError);
-        return { success: false, error: metadataError.message };
-    }
-
     revalidatePath('/vault/admin');
     revalidatePath('/vault/foundations');
     revalidatePath(`/vault/foundations/${slug}`);
-    revalidatePath(`/${formData.get('locale')}/vault/foundations/${slug}`);
+    revalidatePath(`/${formData.get('locale') || 'en'}/vault/foundations/${slug}`);
 
     return { success: true, chapter };
 }
@@ -100,12 +93,14 @@ export async function updateChapter(chapterId: string, formData: FormData) {
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
     const category = formData.get('category') as string || 'masterclass';
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
+    const masterclassId = formData.get('masterclassId') as string || null;
+    const isStandalone = masterclassId ? false : (formData.get('isStandalone') === 'true');
 
     const labQuestions = JSON.parse(formData.get('labQuestions') as string || '[]');
     const takeaways = JSON.parse(formData.get('takeaways') as string || '[]');
     const resourceUrls = JSON.parse(formData.get('resourceUrls') as string || '[]');
 
-    // Update chapter
+    // Update chapter with all data
     const { error: chapterError } = await supabase
         .from('chapters')
         .update({
@@ -117,28 +112,17 @@ export async function updateChapter(chapterId: string, formData: FormData) {
             thumbnail_url: thumbnailUrl,
             category,
             order_index: orderIndex,
+            masterclass_id: masterclassId,
+            is_standalone: isStandalone,
+            lab_questions: labQuestions,
+            takeaways: takeaways,
+            resource_urls: resourceUrls,
             updated_at: new Date().toISOString()
         })
         .eq('id', chapterId);
 
     if (chapterError) {
         return { success: false, error: chapterError.message };
-    }
-
-    // Update metadata using upsert to handle cases where it might not exist
-    const { error: metadataError } = await supabase
-        .from('lesson_metadata')
-        .upsert({
-            chapter_id: chapterId,
-            lab_questions: labQuestions,
-            takeaways: takeaways,
-            resource_urls: resourceUrls,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'chapter_id' });
-
-    if (metadataError) {
-        console.error("Metadata update error:", metadataError);
-        return { success: false, error: metadataError.message };
     }
 
     revalidatePath('/vault/admin');
@@ -175,10 +159,7 @@ export async function getChapters() {
 
     const { data, error } = await supabase
         .from('chapters')
-        .select(`
-            *,
-            lesson_metadata (*)
-        `)
+        .select('*')
         .order('order_index', { ascending: true });
 
     if (error) {

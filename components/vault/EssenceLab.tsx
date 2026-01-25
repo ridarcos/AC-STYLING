@@ -5,10 +5,14 @@ import { createClient } from "@/utils/supabase/client";
 import { Sparkles, Loader2, Check } from "lucide-react";
 
 interface EssenceLabProps {
-    slug: string;
-    initialData: Record<string, any>;
+    masterclassId: string;
+    chapterSlug: string;
+    initialData: Record<string, string>; // Key -> Answer Value
     questions?: Array<{ key: string, label: string, placeholder: string }>;
 }
+
+import { saveEssenceResponse } from "@/app/actions/essence-lab";
+
 
 // Configuration for questions per chapter (fallback)
 const questionsMap: Record<string, { key: string; label: string; placeholder: string }[]> = {
@@ -34,12 +38,13 @@ const questionsMap: Record<string, { key: string; label: string; placeholder: st
     ]
 };
 
-export default function EssenceLab({ slug, initialData, questions: propQuestions }: EssenceLabProps) {
-    // Use provided questions or fall back to hardcoded map
-    const questions = propQuestions || questionsMap[slug] || [];
-    const supabase = createClient();
+export default function EssenceLab({ masterclassId, chapterSlug, initialData, questions: propQuestions }: EssenceLabProps) {
+    // Use provided questions or fall back to hardcoded map using slug
+    const questions = propQuestions || questionsMap[chapterSlug] || [];
+
+    // Initial state from server props
     const [answers, setAnswers] = useState<Record<string, string>>(initialData || {});
-    const [savingStatus, setSavingStatus] = useState<Record<string, 'idle' | 'saving' | 'saved'>>({});
+    const [savingStatus, setSavingStatus] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
 
     const handleChange = (key: string, value: string) => {
         setAnswers(prev => ({ ...prev, [key]: value }));
@@ -47,27 +52,20 @@ export default function EssenceLab({ slug, initialData, questions: propQuestions
     };
 
     const handleBlur = async (key: string, value: string) => {
-        // Only save if dirty? For simplicity, save on every blur for now to ensure persistence.
+        // Did it change? (Optional optimization: compare with initial or prev saved)
+        // For now, always save on blur for reliability.
         setSavingStatus(prev => ({ ...prev, [key]: 'saving' }));
 
-        // Merge with existing data
-        const newData = { ...initialData, ...answers, [key]: value };
+        const result = await saveEssenceResponse(masterclassId, chapterSlug, key, value);
 
-        const { error } = await supabase.auth.getUser().then(async ({ data: { user } }) => {
-            if (!user) return { error: 'No user' };
-            return supabase.from('profiles').update({
-                style_essentials: newData
-            }).eq('id', user.id);
-        });
-
-        if (!error) {
+        if (result.success) {
             setSavingStatus(prev => ({ ...prev, [key]: 'saved' }));
             setTimeout(() => {
                 setSavingStatus(prev => ({ ...prev, [key]: 'idle' }));
             }, 2000);
         } else {
-            setSavingStatus(prev => ({ ...prev, [key]: 'idle' })); // or error state
-            console.error("Failed to save:", error);
+            setSavingStatus(prev => ({ ...prev, [key]: 'error' }));
+            console.error("Failed to save:", result.error);
         }
     };
 

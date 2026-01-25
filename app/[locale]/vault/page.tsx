@@ -1,26 +1,33 @@
 import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import VaultHero from "@/components/vault/VaultHero";
 import QuickActions from "@/components/vault/QuickActions";
-import SmartRecommendations from "@/components/vault/SmartRecommendations";
 import WhatsNew from "@/components/vault/WhatsNew";
+import { getDashboardPulse } from "@/app/actions/dashboard";
 
 export default async function VaultPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    if (!user) {
+        redirect('/login');
+    }
+
+    // Fetch profile and dynamic content concurrently
+    const [profileRes, pulse] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+        getDashboardPulse()
+    ]);
+
+    const profile = profileRes.data;
+
     // Fetch profile
     let fullName = "Guest";
-    if (user) {
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', user.id)
-            .single();
-        if (profile?.full_name) {
-            fullName = profile.full_name;
-        } else {
-            // Fallback to metadata if profile is not yet created/synced
-            fullName = user.user_metadata?.full_name || "Style Icon";
-        }
+    if (profile?.full_name) {
+        fullName = profile.full_name;
+    } else {
+        // Fallback to metadata if profile is not yet created/synced
+        fullName = user.user_metadata?.full_name || "Style Icon";
     }
 
     return (
@@ -36,7 +43,7 @@ export default async function VaultPage() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
                 {/* Main: What's New takes 3 cols */}
                 <div className="lg:col-span-3">
-                    <WhatsNew />
+                    <WhatsNew pulse={pulse} />
                 </div>
 
                 {/* Sidebar: Quick Actions takes 1 col */}
@@ -45,8 +52,7 @@ export default async function VaultPage() {
                 </div>
             </div>
 
-            {/* Footer: Recommendations */}
-            <SmartRecommendations hasStartedCourse={true} />
+            {/* Footer: Recommendations removed per user request */}
         </div>
     );
 }

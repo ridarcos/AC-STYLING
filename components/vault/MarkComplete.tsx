@@ -11,11 +11,10 @@ import { motion, AnimatePresence } from "framer-motion";
 interface MarkCompleteProps {
     slug: string;
     isCompletedInitial: boolean;
+    nextChapterSlug: string | null;
 }
 
-const chaptersOrder = ['dna', 'architecture', 'color', 'detox', 'capsule'];
-
-export default function MarkComplete({ slug, isCompletedInitial }: MarkCompleteProps) {
+export default function MarkComplete({ slug, isCompletedInitial, nextChapterSlug }: MarkCompleteProps) {
     const [isCompleted, setIsCompleted] = useState(isCompletedInitial);
     const [isLoading, setIsLoading] = useState(false);
     const supabase = createClient();
@@ -37,25 +36,22 @@ export default function MarkComplete({ slug, isCompletedInitial }: MarkCompleteP
             setIsCompleted(true);
             triggerCelebration();
 
-            // Find next chapter
-            const currentIndex = chaptersOrder.indexOf(slug);
-            const nextSlug = chaptersOrder[currentIndex + 1];
-
-            if (nextSlug) {
+            if (nextChapterSlug) {
                 toast.success("Session Completed!", {
                     description: "Ready for your next style distillation?",
                     action: {
                         label: "Next Lesson",
-                        onClick: () => router.push(`/vault/foundations/${nextSlug}`)
+                        onClick: () => router.push(`/vault/foundations/${nextChapterSlug}`)
                     },
                     duration: 5000,
                 });
             } else {
                 toast.success("All Chapters Completed!", {
-                    description: "You have mastered the foundations.",
+                    description: "You have mastered this collection.",
                     duration: 5000,
                 });
-                router.push('/vault/essence-summary');
+                // Redirect to a summary page or back to foundations if no next chapter
+                // router.push('/vault/essence-summary'); // Or just stay/refresh
             }
 
             router.refresh();

@@ -51,8 +51,8 @@ export default function ChaptersTable({ chapters, onEdit, onDelete }: ChaptersTa
                             <td className="py-3 px-4 text-ac-taupe">{chapter.order_index}</td>
                             <td className="py-3 px-4">
                                 <span className={`inline-block px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${chapter.category === 'masterclass'
-                                        ? 'bg-ac-olive/10 text-ac-olive'
-                                        : 'bg-ac-gold/10 text-ac-gold'
+                                    ? 'bg-ac-olive/10 text-ac-olive'
+                                    : 'bg-ac-gold/10 text-ac-gold'
                                     }`}>
                                     {chapter.category}
                                 </span>
@@ -61,7 +61,7 @@ export default function ChaptersTable({ chapters, onEdit, onDelete }: ChaptersTa
                             <td className="py-3 px-4 text-ac-taupe/60 text-sm">{chapter.slug}</td>
                             <td className="py-3 px-4 text-ac-taupe/60 text-sm">{chapter.video_id}</td>
                             <td className="py-3 px-4 text-ac-taupe/60 text-sm">
-                                {chapter.lesson_metadata?.[0]?.resource_urls?.length || 0} files
+                                {chapter.resource_urls?.length || 0} files
                             </td>
                             <td className="py-3 px-4 text-right">
                                 <div className="flex gap-2 justify-end">

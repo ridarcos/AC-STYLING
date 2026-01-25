@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "@/i18n/routing";
 
 export default function SmartRecommendations({ hasStartedCourse = false }: { hasStartedCourse?: boolean }) {
 
@@ -82,7 +83,6 @@ export default function SmartRecommendations({ hasStartedCourse = false }: { has
                     );
 
                     if (card.title === "Start Identity Lab") {
-                        const { Link } = require("@/i18n/routing"); // Use require inside map or imported at top
                         return (
                             <Link href="/vault/foundations" key={card.title}>
                                 {CardContent}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, X, Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import { createChapter, updateChapter } from "@/app/actions/admin/manage-chapters";
+import { getMasterclasses } from "@/app/actions/admin/manage-masterclasses";
 import { uploadFile } from "@/app/actions/admin/upload-file";
 import { toast } from "sonner";
 
@@ -24,16 +25,26 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         thumbnailUrl: chapter?.thumbnail_url || '',
         category: chapter?.category || 'masterclass',
         orderIndex: chapter?.order_index || 0,
+        masterclassId: chapter?.masterclass_id || '',
+        isStandalone: chapter?.is_standalone ?? true,
     });
 
+    const [masterclasses, setMasterclasses] = useState<any[]>([]);
+
+    useEffect(() => {
+        getMasterclasses().then(res => {
+            if (res.success) setMasterclasses(res.masterclasses || []);
+        });
+    }, []);
+
     const [labQuestions, setLabQuestions] = useState<Array<{ key: string, label: string, placeholder: string }>>(
-        chapter?.lesson_metadata?.[0]?.lab_questions || []
+        chapter?.lab_questions || []
     );
     const [takeaways, setTakeaways] = useState<string[]>(
-        chapter?.lesson_metadata?.[0]?.takeaways || []
+        chapter?.takeaways || []
     );
     const [resourceUrls, setResourceUrls] = useState<Array<{ name: string, url: string }>>(
-        chapter?.lesson_metadata?.[0]?.resource_urls || []
+        chapter?.resource_urls || []
     );
 
     const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
@@ -50,10 +61,12 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             thumbnailUrl: chapter?.thumbnail_url || '',
             category: chapter?.category || 'masterclass',
             orderIndex: chapter?.order_index || 0,
+            masterclassId: chapter?.masterclass_id || '',
+            isStandalone: chapter?.is_standalone ?? true,
         });
-        setLabQuestions(chapter?.lesson_metadata?.[0]?.lab_questions || []);
-        setTakeaways(chapter?.lesson_metadata?.[0]?.takeaways || []);
-        setResourceUrls(chapter?.lesson_metadata?.[0]?.resource_urls || []);
+        setLabQuestions(chapter?.lab_questions || []);
+        setTakeaways(chapter?.takeaways || []);
+        setResourceUrls(chapter?.resource_urls || []);
     }, [chapter]);
 
     // Thumbnail uploader
@@ -117,6 +130,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         fd.append('thumbnailUrl', formData.thumbnailUrl);
         fd.append('category', formData.category);
         fd.append('orderIndex', formData.orderIndex.toString());
+        fd.append('masterclassId', formData.masterclassId);
+        fd.append('isStandalone', formData.isStandalone.toString());
         fd.append('labQuestions', JSON.stringify(labQuestions));
         fd.append('takeaways', JSON.stringify(takeaways));
         fd.append('resourceUrls', JSON.stringify(resourceUrls));
@@ -130,7 +145,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             onSuccess();
             // Reset form if creating new
             if (!chapter) {
-                setFormData({ slug: '', title: '', subtitle: '', description: '', videoId: '', thumbnailUrl: '', category: 'masterclass', orderIndex: 0 });
+                setFormData({ slug: '', title: '', subtitle: '', description: '', videoId: '', thumbnailUrl: '', category: 'masterclass', orderIndex: 0, masterclassId: '', isStandalone: true });
                 setLabQuestions([]);
                 setTakeaways([]);
                 setResourceUrls([]);
@@ -225,7 +240,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                 value={formData.orderIndex || ''}
                                 onChange={(e) => {
                                     const val = e.target.value;
-                                    setFormData({ ...formData, orderIndex: val === '' ? 0 : parseInt(val) });
+                                    const intVal = parseInt(val);
+                                    setFormData({ ...formData, orderIndex: isNaN(intVal) ? 0 : intVal });
                                 }}
                                 className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
                             />
@@ -262,6 +278,63 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                             className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
                         />
                         <p className="text-xs text-ac-taupe/40 mt-1">{formData.subtitle.length}/100</p>
+                    </div>
+                </div>
+            </div>
+
+
+            {/* Masterclass Assignment */}
+            <div className="p-6 bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm">
+                <h3 className="font-serif text-xl text-ac-taupe border-b border-ac-taupe/10 pb-3 mb-4">
+                    Organization
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                            Parent Masterclass
+                        </label>
+                        <select
+                            value={formData.masterclassId}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData({
+                                    ...formData,
+                                    masterclassId: val,
+                                    isStandalone: val ? false : true // Auto-toggle standalone
+                                });
+                            }}
+                            className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                        >
+                            <option value="">-- None (Standalone Lesson) --</option>
+                            {masterclasses.map(mc => (
+                                <option key={mc.id} value={mc.id}>{mc.title}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-ac-taupe/40 mt-2">
+                            Linking to a masterclass will group this chapter under that collection.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center">
+                        <div className="flex items-center gap-3 bg-white/40 p-4 rounded-sm border border-ac-taupe/5 w-full">
+                            <input
+                                type="checkbox"
+                                id="isStandalone"
+                                checked={formData.isStandalone}
+                                onChange={(e) => setFormData({ ...formData, isStandalone: e.target.checked })}
+                                disabled={!!formData.masterclassId} // Lock if masterclass selected
+                                className="w-5 h-5 accent-ac-gold cursor-pointer"
+                            />
+                            <div>
+                                <label htmlFor="isStandalone" className="block text-sm font-bold text-ac-taupe cursor-pointer">
+                                    Mark as Standalone
+                                </label>
+                                <p className="text-xs text-ac-taupe/60">
+                                    Standalone lessons appear in the "Single Lessons" feed.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -323,7 +396,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                         <span className="text-xs text-ac-taupe/60">Q{i + 1}</span>
                                         <button
                                             type="button"
-                                            onClick={() => setLabQuestions(labQuestions.filter((_, idx) => idx !== i))}
+                                            onClick={() => setLabQuestions(prev => prev.filter((_, idx) => idx !== i))}
                                             className="text-red-500 hover:text-red-700"
                                         >
                                             <Trash2 size={14} />
@@ -334,9 +407,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                         placeholder="Key: style_words"
                                         value={q.key}
                                         onChange={(e) => {
-                                            const updated = [...labQuestions];
-                                            updated[i].key = e.target.value;
-                                            setLabQuestions(updated);
+                                            const newVal = e.target.value;
+                                            setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, key: newVal } : item));
                                         }}
                                         className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
                                     />
@@ -345,9 +417,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                         placeholder="Label: My Style Words"
                                         value={q.label}
                                         onChange={(e) => {
-                                            const updated = [...labQuestions];
-                                            updated[i].label = e.target.value;
-                                            setLabQuestions(updated);
+                                            const newVal = e.target.value;
+                                            setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, label: newVal } : item));
                                         }}
                                         className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
                                     />
@@ -356,9 +427,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                         placeholder="Placeholder..."
                                         value={q.placeholder}
                                         onChange={(e) => {
-                                            const updated = [...labQuestions];
-                                            updated[i].placeholder = e.target.value;
-                                            setLabQuestions(updated);
+                                            const newVal = e.target.value;
+                                            setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, placeholder: newVal } : item));
                                         }}
                                         className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
                                     />
@@ -392,15 +462,14 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                             placeholder="Key takeaway..."
                                             value={t}
                                             onChange={(e) => {
-                                                const updated = [...takeaways];
-                                                updated[i] = e.target.value;
-                                                setTakeaways(updated);
+                                                const newVal = e.target.value;
+                                                setTakeaways(prev => prev.map((item, idx) => idx === i ? newVal : item));
                                             }}
                                             className="flex-1 bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setTakeaways(takeaways.filter((_, idx) => idx !== i))}
+                                            onClick={() => setTakeaways(prev => prev.filter((_, idx) => idx !== i))}
                                             className="text-red-500 hover:text-red-700"
                                         >
                                             <Trash2 size={14} />
@@ -436,7 +505,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                         <span className="text-xs text-ac-taupe truncate">{r.name}</span>
                                         <button
                                             type="button"
-                                            onClick={() => setResourceUrls(resourceUrls.filter((_, idx) => idx !== i))}
+                                            onClick={() => setResourceUrls(prev => prev.filter((_, idx) => idx !== i))}
                                             className="text-red-500 hover:text-red-700"
                                         >
                                             <X size={14} />
@@ -468,6 +537,6 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                     {loading ? 'Saving...' : chapter ? 'Update Chapter' : 'Create Chapter'}
                 </button>
             </div>
-        </form>
+        </form >
     );
 }
