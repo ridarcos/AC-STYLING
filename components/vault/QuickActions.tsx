@@ -20,7 +20,6 @@ export default function QuickActions({ isMasterclassComplete = false }: QuickAct
         { label: t('actions.courses.label'), subtitle: t('actions.courses.subtitle'), icon: Archive, href: "/vault/courses", action: null },
         { label: t('actions.studio.label'), subtitle: t('actions.studio.subtitle'), icon: Calendar, href: "/vault/services", action: null },
         { label: t('actions.boutique.label'), subtitle: t('actions.boutique.subtitle'), icon: Tag, href: "/vault/boutique", action: null },
-        { label: t('actions.essence.label'), subtitle: t('actions.essence.subtitle'), icon: BookHeart, href: "/vault/essence", action: null },
         { label: t('actions.ask.label'), subtitle: t('actions.ask.subtitle'), icon: MessageCircleQuestion, href: "#", action: "ask" },
     ];
 

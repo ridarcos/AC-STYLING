@@ -32,6 +32,8 @@ export async function createMasterclass(formData: FormData) {
     const description = formData.get('description') as string;
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
+    const stripeProductId = formData.get('stripeProductId') as string;
+    const priceId = formData.get('priceId') as string;
 
     const { data, error } = await supabase
         .from('masterclasses')
@@ -40,11 +42,12 @@ export async function createMasterclass(formData: FormData) {
             subtitle,
             description,
             thumbnail_url: thumbnailUrl,
-            order_index: orderIndex
+            order_index: orderIndex,
+            stripe_product_id: stripeProductId,
+            price_id: priceId
         })
         .select()
         .single();
-
     if (error) {
         return { success: false, error: error.message };
     }
@@ -54,7 +57,6 @@ export async function createMasterclass(formData: FormData) {
 
     return { success: true, masterclass: data };
 }
-
 export async function updateMasterclass(id: string, formData: FormData) {
     const { authorized, supabase } = await checkAdmin();
     if (!authorized) {
@@ -66,6 +68,8 @@ export async function updateMasterclass(id: string, formData: FormData) {
     const description = formData.get('description') as string;
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
+    const stripeProductId = formData.get('stripeProductId') as string;
+    const priceId = formData.get('priceId') as string;
 
     const { error } = await supabase
         .from('masterclasses')
@@ -75,6 +79,8 @@ export async function updateMasterclass(id: string, formData: FormData) {
             description,
             thumbnail_url: thumbnailUrl,
             order_index: orderIndex,
+            stripe_product_id: stripeProductId,
+            price_id: priceId,
             updated_at: new Date().toISOString()
         })
         .eq('id', id);

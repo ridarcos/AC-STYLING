@@ -7,6 +7,9 @@ import VaultVideoPlayer from "@/components/vault/VaultVideoPlayer";
 import EssenceLab from "@/components/vault/EssenceLab";
 import MarkComplete from "@/components/vault/MarkComplete";
 import { createClient } from "@/utils/supabase/server";
+import { checkAccess } from "@/utils/access-control";
+import InteractiveGate from "@/components/auth/InteractiveGate";
+import UnlockButton from "@/components/monetization/UnlockButton";
 
 export default async function CourseLessonPage({ params }: { params: Promise<{ slug: string; locale: string }> }) {
     const { slug, locale } = await params;
@@ -41,11 +44,17 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
     // Fetch User Data
     const { data: { user } } = await supabase.auth.getUser();
 
-    let styleEssentials = {};
+    // Ensure we don't treat anonymous users as "logged in" for purchase flow
+    const isAuthenticated = user && !user.is_anonymous;
+
+    // Check Access
+    const hasAccess = user ? await checkAccess(user.id, chapter.id) : false;
+
+    const styleEssentials = {};
     let isCompleted = false;
 
     // Fetch Essence Lab Answers
-    let essenceMap: Record<string, string> = {};
+    const essenceMap: Record<string, string> = {};
     if (user) {
         // For standalone courses, the "masterclass_id" concept is fuzzy.
         // We can use the chapter ID itself as the grouping ID in the DB, 
@@ -118,9 +127,17 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
 
                 {/* Left Column (70%) */}
                 <div className="lg:col-span-7 space-y-12">
-                    {/* Video Player */}
+                    {/* Video Player (GATED) */}
                     <div className="space-y-6">
-                        <VaultVideoPlayer videoId={chapter.video_id} videoIdEs={chapter.video_id_es} title={chapter.title} />
+                        <InteractiveGate
+                            isLocked={!hasAccess}
+                            title="Unlock This Course"
+                            type="overlay"
+                            priceId={chapter.price_id}
+                            isLoggedIn={!!isAuthenticated}
+                        >
+                            <VaultVideoPlayer videoId={chapter.video_id} videoIdEs={chapter.video_id_es} title={chapter.title} />
+                        </InteractiveGate>
 
                         <div className="flex justify-between items-start">
                             <div className="prose prose-stone max-w-none flex-1">
@@ -130,17 +147,21 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                                 </div>
                             </div>
 
-                            {/* Desktop Completion Button */}
-                            <div className="hidden lg:block ml-6">
-                                <MarkComplete slug={chapter.slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
-                            </div>
+                            {/* Desktop Completion Button - Only show if accessible */}
+                            {hasAccess && (
+                                <div className="hidden lg:block ml-6">
+                                    <MarkComplete slug={chapter.slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Mobile Completion Button */}
-                    <div className="lg:hidden">
-                        <MarkComplete slug={chapter.slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
-                    </div>
+                    {hasAccess && (
+                        <div className="lg:hidden">
+                            <MarkComplete slug={chapter.slug} isCompletedInitial={isCompleted} nextChapterSlug={nextChapterSlug} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Column (30%) - Stacked Cards */}
@@ -166,14 +187,21 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                         )}
                     </div>
 
-                    {/* 2. Styling Essence Lab */}
-                    <EssenceLab
-                        masterclassId={null}
-                        chapterId={chapter.id}
-                        chapterSlug={chapter.slug}
-                        initialData={essenceMap}
-                        questions={labQuestions}
-                    />
+                    {/* 2. Styling Essence Lab (GATED or Preview?) - Gated for now as it assumes watching */}
+                    {hasAccess ? (
+                        <EssenceLab
+                            masterclassId={null}
+                            chapterId={chapter.id}
+                            chapterSlug={chapter.slug}
+                            initialData={essenceMap}
+                            questions={labQuestions}
+                        />
+                    ) : (
+                        <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm opacity-50 cursor-not-allowed">
+                            <h3 className="font-serif text-xl text-ac-taupe mb-4 opacity-50">Essence Lab</h3>
+                            <p className="text-sm text-ac-taupe/60 italic">Unlock course to access lab questions.</p>
+                        </div>
+                    )}
 
                     {/* 3. Resources */}
                     <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm">
@@ -186,15 +214,16 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                                 {resourceUrls.map((resource: { name: string, url: string }, i: number) => (
                                     <a
                                         key={i}
-                                        href={resource.url}
+                                        href={hasAccess ? resource.url : "#"} // Disable link if locked
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="w-full flex items-center justify-between p-3 bg-white/40 hover:bg-white/60 border border-transparent hover:border-ac-gold/20 transition-all rounded-sm group text-left"
+                                        className={`w-full flex items-center justify-between p-3 bg-white/40 border border-transparent transition-all rounded-sm group text-left ${hasAccess ? 'hover:bg-white/60 hover:border-ac-gold/20' : 'opacity-50 cursor-not-allowed'}`}
+                                        onClick={(e) => !hasAccess && e.preventDefault()}
                                     >
                                         <span className="text-sm font-bold text-ac-taupe group-hover:text-ac-olive truncate">
                                             {resource.name}
                                         </span>
-                                        <Download size={14} className="text-ac-gold ml-2" />
+                                        {hasAccess && <Download size={14} className="text-ac-gold ml-2" />}
                                     </a>
                                 ))}
                             </div>

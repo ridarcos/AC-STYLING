@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft, PlayCircle, FolderOpen, Check } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
+import CoursePassUnlock from "@/components/vault/CoursePassUnlock";
 
 export default async function CoursesPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -18,13 +19,23 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
         .eq('is_standalone', true)
         .order('order_index', { ascending: true });
 
-    // User Progress Logic
+    // User Progress & Profile Logic
     const completedChapters = new Set();
+    let hasCourseAccess = false; // Hide banner if they have it or full access
+
     if (user) {
-        const { data: progress } = await supabase
-            .from('user_progress')
-            .select('content_id')
-            .eq('user_id', user.id);
+        // Parallel Fetch: Profile & Progress
+        const [progressRes, profileRes] = await Promise.all([
+            supabase.from('user_progress').select('content_id').eq('user_id', user.id),
+            supabase.from('profiles').select('has_full_unlock, has_course_pass').eq('id', user.id).single()
+        ]);
+
+        const progress = progressRes.data;
+        const profile = profileRes.data;
+
+        if (profile) {
+            hasCourseAccess = profile.has_full_unlock || profile.has_course_pass || false;
+        }
 
         progress?.forEach(p => {
             if (p.content_id.startsWith('foundations/')) {
@@ -39,6 +50,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 border-b border-ac-taupe/10 pb-4">
                 <div>
+                    {/* ... header content ... */}
                     <Link href="/vault" className="flex items-center gap-2 text-xs uppercase tracking-widest text-ac-taupe/60 hover:text-ac-olive transition-colors mb-4 group">
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
                         {t('back')}
@@ -50,6 +62,11 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                         {t('subtitle')}
                     </p>
                 </div>
+            </div>
+
+            {/* Course Pass Banner */}
+            <div className="mb-8">
+                <CoursePassUnlock userId={user?.id} hasCoursePass={hasCourseAccess} />
             </div>
 
             {/* STANDALONE CHAPTERS GRID */}

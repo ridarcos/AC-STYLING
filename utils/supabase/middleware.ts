@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
                 getAll() {
                     return request.cookies.getAll()
                 },
-                setAll(cookiesToSet) {
+                setAll(cookiesToSet: any[]) {
                     cookiesToSet.forEach(({ name, value, options }) =>
                         request.cookies.set(name, value)
                     )
@@ -48,13 +48,14 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     // Protect /vault routes
-    if (request.nextUrl.pathname.includes('/vault') && !user) {
+    // Exclude public paths: /vault/join (Signup) and /vault/gallery (Marketing)
+    const isVaultPublicRoute =
+        request.nextUrl.pathname.includes('/vault/join') ||
+        request.nextUrl.pathname.includes('/vault/gallery');
+
+    if (request.nextUrl.pathname.includes('/vault') && !isVaultPublicRoute && !user) {
         const url = request.nextUrl.clone()
-        // Redirect to login, maintaining locale if possible or defaulting
-        // Assuming the path is like /[locale]/vault... 
-        // We can extract locale or just redirect to /en/login for now, 
-        // but better to keep relative or parse.
-        // Let's redirect to the matching login page.
+        // ... (existing redirect logic)
         const pathSegments = request.nextUrl.pathname.split('/');
         const locale = pathSegments[1] || 'en';
         url.pathname = `/${locale}/login`

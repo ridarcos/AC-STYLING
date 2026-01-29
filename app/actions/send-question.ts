@@ -23,13 +23,16 @@ export async function sendQuestion(formData: FormData) {
         .eq('id', user.id)
         .single();
 
-    const userName = profile?.full_name || user.email;
+    const userName = profile?.full_name || user.email; // Fallback to email if name missing
+    const userEmail = user.email || 'noreply@ac-styling.com'; // Should always exist for auth user
     const essentials = profile?.style_essentials || {};
 
     // Format Context
     const contextHtml = `
         <div style="background: #f4f4f4; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
             <h3 style="margin-top: 0; color: #7F8968;">Styling Essence Context</h3>
+            <p><strong>Name:</strong> ${userName}</p>
+            <p><strong>Email:</strong> ${userEmail}</p>
             <p><strong>Style Words:</strong> ${essentials.style_words || 'Not set'}</p>
             <p><strong>Style Mood:</strong> ${essentials.style_mood || 'Not set'}</p>
              <p><strong>Power Color:</strong> ${essentials.power_color || 'Not set'}</p>
@@ -38,8 +41,9 @@ export async function sendQuestion(formData: FormData) {
 
     try {
         const { data, error } = await resend.emails.send({
-            from: 'AC Styling Lab <onboarding@resend.dev>', // Use verified domain in prod
-            to: ['magomezf94@gmail.com'], // Hardcoded receiver for now as requested (hello@theacstyle.com implies verify) but user gave specific example to magomezf94. Ill use that for testing or 'hello...'? User said "hello@theacstyle.com" in prompt but gave example to "magomezf94". I'll use the example one for guaranteed delivery in test, or better, the one requested "hello@theacstyle.com". But standard Resend free tier only sends TO the account owner email. I'll stick to 'magomezf94@gmail.com' as per the example provided to ensure it works for them now.
+            from: 'AC Styling Lab <onboarding@resend.dev>',
+            to: ['magomezf94@gmail.com'],
+            replyTo: userEmail, // Valid Reply-To
             subject: `[Vault Question] - ${userName}`,
             html: `
                 <div style="font-family: sans-serif; color: #333;">

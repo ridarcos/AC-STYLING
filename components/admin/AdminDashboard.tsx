@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import ChapterForm from "./ChapterForm";
 import ChaptersTable from "./ChaptersTable";
 import MasterclassForm from "./MasterclassForm";
+import OfferForm from "./OfferForm"; // Generic offer form
 import BoutiqueManager from "./BoutiqueManager";
 import ClientList from "./ClientList";
 import ClientDossier from "./ClientDossier";
@@ -28,6 +29,9 @@ export default function AdminDashboard() {
     const [editingItem, setEditingItem] = useState<any | null>(null);
     const [selectedClient, setSelectedClient] = useState<any | null>(null);
 
+    // Offer Management State
+    const [editingOfferSlug, setEditingOfferSlug] = useState<string | null>(null);
+
     const formRef = useRef<HTMLDivElement>(null);
 
     const loadData = async () => {
@@ -43,15 +47,16 @@ export default function AdminDashboard() {
 
     // Scroll to form when editing
     useEffect(() => {
-        if ((editingItem || isCreating) && formRef.current) {
+        if ((editingItem || isCreating || editingOfferSlug) && formRef.current) {
             formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-    }, [editingItem, isCreating]);
+    }, [editingItem, isCreating, editingOfferSlug]);
 
     const handleSuccess = () => {
         loadData();
         setEditingItem(null);
         setIsCreating(false);
+        setEditingOfferSlug(null);
     };
 
     const handleDeleteMasterclass = async (id: string, title: string) => {
@@ -61,7 +66,7 @@ export default function AdminDashboard() {
             toast.success("Masterclass deleted");
             loadData();
         } else {
-            toast.error(res.error);
+            toast.error(res.error || "Failed to delete");
         }
     };
 
@@ -72,7 +77,7 @@ export default function AdminDashboard() {
             toast.success("Service deleted");
             loadData();
         } else {
-            toast.error(res.error);
+            toast.error(res.error || "Failed to delete");
         }
     };
 
@@ -81,7 +86,7 @@ export default function AdminDashboard() {
             {/* Tabs */}
             <div className="flex gap-4 border-b border-ac-taupe/10 overflow-x-auto">
                 <button
-                    onClick={() => { setActiveTab('masterclasses'); setIsCreating(false); setEditingItem(null); }}
+                    onClick={() => { setActiveTab('masterclasses'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'masterclasses'
                         ? 'text-ac-taupe border-b-2 border-ac-gold'
                         : 'text-ac-taupe/40 hover:text-ac-taupe/60'
@@ -91,7 +96,7 @@ export default function AdminDashboard() {
                     Masterclasses
                 </button>
                 <button
-                    onClick={() => { setActiveTab('chapters'); setIsCreating(false); setEditingItem(null); }}
+                    onClick={() => { setActiveTab('chapters'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'chapters'
                         ? 'text-ac-taupe border-b-2 border-ac-gold'
                         : 'text-ac-taupe/40 hover:text-ac-taupe/60'
@@ -101,7 +106,7 @@ export default function AdminDashboard() {
                     Chapters
                 </button>
                 <button
-                    onClick={() => { setActiveTab('services'); setIsCreating(false); setEditingItem(null); }}
+                    onClick={() => { setActiveTab('services'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'services'
                         ? 'text-ac-taupe border-b-2 border-ac-gold'
                         : 'text-ac-taupe/40 hover:text-ac-taupe/60'
@@ -111,7 +116,7 @@ export default function AdminDashboard() {
                     Services
                 </button>
                 <button
-                    onClick={() => { setActiveTab('boutique'); setIsCreating(false); setEditingItem(null); }}
+                    onClick={() => { setActiveTab('boutique'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'boutique'
                         ? 'text-ac-taupe border-b-2 border-ac-gold'
                         : 'text-ac-taupe/40 hover:text-ac-taupe/60'
@@ -121,7 +126,7 @@ export default function AdminDashboard() {
                     Boutique
                 </button>
                 <button
-                    onClick={() => { setActiveTab('clients'); setIsCreating(false); setEditingItem(null); }}
+                    onClick={() => { setActiveTab('clients'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'clients'
                         ? 'text-ac-taupe border-b-2 border-ac-gold'
                         : 'text-ac-taupe/40 hover:text-ac-taupe/60'
@@ -132,7 +137,7 @@ export default function AdminDashboard() {
                 </button>
             </div>
 
-            {/* Action Bar (Not shown in Clients/Boutique tab usually, or different actions) */}
+            {/* Action Bar */}
             {
                 activeTab !== 'clients' && activeTab !== 'boutique' && (
                     <div className="flex justify-between items-center">
@@ -141,29 +146,56 @@ export default function AdminDashboard() {
                                 activeTab === 'chapters' ? 'Video Chapters' :
                                     'Strategic Services'}
                         </h2>
-                        <button
-                            onClick={() => { setIsCreating(true); setEditingItem(null); }}
-                            className="flex items-center gap-2 bg-ac-taupe text-white px-4 py-2 rounded-sm hover:bg-ac-taupe/90 transition-colors"
-                        >
-                            <Plus size={18} />
-                            Create New
-                        </button>
+                        <div className="flex gap-3">
+                            {activeTab === 'masterclasses' && (
+                                <button
+                                    onClick={() => { setEditingOfferSlug('full_access'); setEditingItem(null); setIsCreating(false); }}
+                                    className="flex items-center gap-2 border border-ac-gold text-ac-gold px-4 py-2 rounded-sm hover:bg-ac-gold/10 transition-colors"
+                                >
+                                    <Sparkles size={18} />
+                                    Full Access
+                                </button>
+                            )}
+                            {activeTab === 'chapters' && (
+                                <button
+                                    onClick={() => { setEditingOfferSlug('course_pass'); setEditingItem(null); setIsCreating(false); }}
+                                    className="flex items-center gap-2 border border-ac-gold text-ac-gold px-4 py-2 rounded-sm hover:bg-ac-gold/10 transition-colors"
+                                >
+                                    <Tag size={18} />
+                                    Course Pass
+                                </button>
+                            )}
+                            <button
+                                onClick={() => { setIsCreating(true); setEditingItem(null); setEditingOfferSlug(null); }}
+                                className="flex items-center gap-2 bg-ac-taupe text-white px-4 py-2 rounded-sm hover:bg-ac-taupe/90 transition-colors"
+                            >
+                                <Plus size={18} />
+                                Create New
+                            </button>
+                        </div>
                     </div>
                 )
             }
 
             {/* Form Area */}
             {
-                (isCreating || editingItem) && activeTab !== 'clients' && activeTab !== 'boutique' && (
+                (isCreating || editingItem || editingOfferSlug) && activeTab !== 'clients' && activeTab !== 'boutique' && (
                     <div ref={formRef} className="bg-white/40 backdrop-blur-md border border-ac-gold shadow-lg rounded-sm p-8">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-serif text-xl text-ac-taupe">
-                                {editingItem ? 'Edit Item' : 'New Item'}
+                                {editingOfferSlug ? 'Offer Settings' : (editingItem ? 'Edit Item' : 'New Item')}
                             </h3>
-                            <button onClick={() => { setIsCreating(false); setEditingItem(null); }} className="text-sm text-ac-taupe/60">Close</button>
+                            <button onClick={() => { setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }} className="text-sm text-ac-taupe/60">Close</button>
                         </div>
 
-                        {activeTab === 'masterclasses' ? (
+                        {editingOfferSlug ? (
+                            <OfferForm
+                                slug={editingOfferSlug}
+                                initialTitle={editingOfferSlug === 'full_access' ? "AC Styling: The Full Vault" : "Course Pass"}
+                                initialDescription={editingOfferSlug === 'full_access' ? "Complete access to all Masterclasses." : "Unlock all standalone courses/lessons."}
+                                onClose={handleSuccess}
+                            />
+                        ) : activeTab === 'masterclasses' ? (
                             <MasterclassForm
                                 masterclass={editingItem}
                                 onSuccess={handleSuccess}
@@ -262,6 +294,6 @@ export default function AdminDashboard() {
                     />
                 )
             }
-        </div >
+        </div>
     );
 }

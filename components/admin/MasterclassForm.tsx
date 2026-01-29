@@ -21,6 +21,8 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
         description: masterclass?.description || '',
         thumbnailUrl: masterclass?.thumbnail_url || '',
         orderIndex: masterclass?.order_index || 0,
+        stripeProductId: masterclass?.stripe_product_id || '',
+        priceId: masterclass?.price_id || '',
     });
 
     const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
@@ -32,6 +34,8 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
             description: masterclass?.description || '',
             thumbnailUrl: masterclass?.thumbnail_url || '',
             orderIndex: masterclass?.order_index || 0,
+            stripeProductId: masterclass?.stripe_product_id || '',
+            priceId: masterclass?.price_id || '',
         });
     }, [masterclass]);
 
@@ -64,6 +68,8 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
         fd.append('description', formData.description);
         fd.append('thumbnailUrl', formData.thumbnailUrl);
         fd.append('orderIndex', formData.orderIndex.toString());
+        fd.append('stripeProductId', formData.stripeProductId);
+        fd.append('priceId', formData.priceId);
 
         const result = masterclass
             ? await updateMasterclass(masterclass.id, fd)
@@ -73,7 +79,7 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
             toast.success(masterclass ? 'Masterclass updated' : 'Masterclass created');
             onSuccess();
             if (!masterclass) {
-                setFormData({ title: '', subtitle: '', description: '', thumbnailUrl: '', orderIndex: 0 });
+                setFormData({ title: '', subtitle: '', description: '', thumbnailUrl: '', orderIndex: 0, stripeProductId: '', priceId: '' });
             }
         } else {
             toast.error(result.error);
@@ -152,6 +158,81 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
                             onChange={(e) => setFormData({ ...formData, orderIndex: parseInt(e.target.value) || 0 })}
                             className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 bg-ac-taupe/5 p-4 rounded-sm border border-ac-taupe/10">
+                            <h4 className="text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-3">Stripe Integration</h4>
+
+                            <div className="flex gap-4 items-end mb-4">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                                        Generator Price (USD)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        placeholder="50"
+                                        className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-2 text-sm"
+                                        id="gen-price-input"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const priceInput = document.getElementById('gen-price-input') as HTMLInputElement;
+                                        const price = parseFloat(priceInput.value);
+                                        if (!formData.title) {
+                                            toast.error("Please enter a Title first");
+                                            return;
+                                        }
+                                        if (!price || price <= 0) {
+                                            toast.error("Please enter a valid price");
+                                            return;
+                                        }
+
+                                        const toastId = toast.loading("Generating Stripe Product...");
+                                        const { createStripeProduct } = await import('@/app/actions/admin/stripe-product');
+                                        const res = await createStripeProduct(formData.title, price, 'masterclass');
+
+                                        if (res.success && res.productId && res.priceId) {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                stripeProductId: res.productId!,
+                                                priceId: res.priceId!
+                                            }));
+                                            toast.success("Stripe Product Created!", { id: toastId });
+                                        } else {
+                                            toast.error(res.error || "Failed to generate", { id: toastId });
+                                        }
+                                    }}
+                                    className="px-4 py-2 bg-ac-gold text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-ac-gold/80 h-[38px]"
+                                >
+                                    Generate
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Product ID</label>
+                                    <input
+                                        type="text"
+                                        value={formData.stripeProductId}
+                                        onChange={(e) => setFormData({ ...formData, stripeProductId: e.target.value })}
+                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
+                                        placeholder="prod_..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Price ID</label>
+                                    <input
+                                        type="text"
+                                        value={formData.priceId}
+                                        onChange={(e) => setFormData({ ...formData, priceId: e.target.value })}
+                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
+                                        placeholder="price_..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

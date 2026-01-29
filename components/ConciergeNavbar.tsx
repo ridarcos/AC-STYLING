@@ -32,12 +32,12 @@ export default function ConciergeNavbar() {
                 <div className="flex items-center space-x-6 md:space-x-8">
                     <LanguageSwitcher isScrolled={true} />
 
-                    <button className="flex items-center gap-2 text-sm uppercase tracking-widest hover:text-ac-gold transition-colors duration-300">
+                    <Link href="/vault/profile" className="flex items-center gap-2 text-sm uppercase tracking-widest hover:text-ac-gold transition-colors duration-300">
                         <span className="hidden md:inline">Profile</span>
                         <div className="p-2 border border-ac-taupe/20 rounded-full hover:border-ac-gold transition-colors">
                             <User size={18} />
                         </div>
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>

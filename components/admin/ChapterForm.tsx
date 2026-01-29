@@ -3,13 +3,47 @@
 import { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, X, Plus, Trash2, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 import { createChapter, updateChapter } from "@/app/actions/admin/manage-chapters";
 import { getMasterclasses } from "@/app/actions/admin/manage-masterclasses";
 import { uploadFile } from "@/app/actions/admin/upload-file";
 import { toast } from "sonner";
 
+interface Chapter {
+    id: string;
+    slug: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    video_id: string;
+    video_id_es: string;
+    thumbnail_url: string;
+    category: string;
+    order_index: number;
+    masterclass_id: string;
+    is_standalone: boolean;
+    lab_questions: LabQuestion[];
+    takeaways: string[];
+    resource_urls: ResourceUrl[];
+    stripe_product_id?: string;
+    price_id?: string;
+}
+
+interface LabQuestion {
+    key: string;
+    label: string;
+    placeholder: string;
+    mapToEssence?: boolean;
+    mappingCategory?: string;
+}
+
+interface ResourceUrl {
+    name: string;
+    url: string;
+}
+
 interface ChapterFormProps {
-    chapter?: any;
+    chapter?: Chapter;
     onSuccess: () => void;
     onCancel?: () => void;
 }
@@ -28,6 +62,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         orderIndex: chapter?.order_index || 0,
         masterclassId: chapter?.masterclass_id || '',
         isStandalone: chapter?.is_standalone ?? true,
+        stripeProductId: chapter?.stripe_product_id || '',
+        priceId: chapter?.price_id || '',
     });
 
     const [masterclasses, setMasterclasses] = useState<any[]>([]);
@@ -38,7 +74,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         });
     }, []);
 
-    const [labQuestions, setLabQuestions] = useState<Array<{ key: string, label: string, placeholder: string }>>(
+    const [labQuestions, setLabQuestions] = useState<LabQuestion[]>(
         chapter?.lab_questions || []
     );
     const [takeaways, setTakeaways] = useState<string[]>(
@@ -65,6 +101,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             orderIndex: chapter?.order_index || 0,
             masterclassId: chapter?.masterclass_id || '',
             isStandalone: chapter?.is_standalone ?? true,
+            stripeProductId: chapter?.stripe_product_id || '',
+            priceId: chapter?.price_id || '',
         });
         setLabQuestions(chapter?.lab_questions || []);
         setTakeaways(chapter?.takeaways || []);
@@ -135,6 +173,8 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         fd.append('orderIndex', formData.orderIndex.toString());
         fd.append('masterclassId', formData.masterclassId);
         fd.append('isStandalone', formData.isStandalone.toString());
+        fd.append('stripeProductId', formData.stripeProductId);
+        fd.append('priceId', formData.priceId);
         fd.append('labQuestions', JSON.stringify(labQuestions));
         fd.append('takeaways', JSON.stringify(takeaways));
         fd.append('resourceUrls', JSON.stringify(resourceUrls));
@@ -148,7 +188,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             onSuccess();
             // Reset form if creating new
             if (!chapter) {
-                setFormData({ slug: '', title: '', subtitle: '', description: '', videoId: '', videoIdEs: '', thumbnailUrl: '', category: 'masterclass', orderIndex: 0, masterclassId: '', isStandalone: true });
+                setFormData({ slug: '', title: '', subtitle: '', description: '', videoId: '', videoIdEs: '', thumbnailUrl: '', category: 'masterclass', orderIndex: 0, masterclassId: '', isStandalone: true, stripeProductId: '', priceId: '' });
                 setLabQuestions([]);
                 setTakeaways([]);
                 setResourceUrls([]);
@@ -177,11 +217,16 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
 
                         {formData.thumbnailUrl ? (
                             <div className="relative aspect-video rounded-sm overflow-hidden border border-ac-taupe/20 bg-ac-taupe/5">
-                                <img src={formData.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                                <Image
+                                    src={formData.thumbnailUrl}
+                                    alt="Thumbnail"
+                                    fill
+                                    className="object-cover"
+                                />
                                 <button
                                     type="button"
                                     onClick={() => setFormData({ ...formData, thumbnailUrl: '' })}
-                                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-10"
                                 >
                                     <X size={16} />
                                 </button>
@@ -407,47 +452,102 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
 
                         <div className="space-y-3 max-h-96 overflow-y-auto">
                             {labQuestions.map((q, i) => (
-                                <div key={i} className="bg-white/20 p-3 rounded-sm space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-ac-taupe/60">Q{i + 1}</span>
+                                <div key={i} className="bg-white/20 p-4 rounded-sm space-y-3 border border-ac-taupe/5">
+                                    <div className="flex justify-between items-center bg-ac-taupe/5 p-2 rounded-sm -mx-2 -mt-2 mb-2">
+                                        <span className="text-xs font-bold text-ac-taupe/60 uppercase tracking-widest">Question {i + 1}</span>
                                         <button
                                             type="button"
                                             onClick={() => setLabQuestions(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="text-red-500 hover:text-red-700"
+                                            className="text-red-500 hover:text-red-700 bg-white/40 p-1 rounded-sm"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={12} />
                                         </button>
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Key: style_words"
-                                        value={q.key}
-                                        onChange={(e) => {
-                                            const newVal = e.target.value;
-                                            setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, key: newVal } : item));
-                                        }}
-                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Label: My Style Words"
-                                        value={q.label}
-                                        onChange={(e) => {
-                                            const newVal = e.target.value;
-                                            setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, label: newVal } : item));
-                                        }}
-                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Placeholder..."
-                                        value={q.placeholder}
-                                        onChange={(e) => {
-                                            const newVal = e.target.value;
-                                            setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, placeholder: newVal } : item));
-                                        }}
-                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
-                                    />
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="md:col-span-2">
+                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">Question Key (Unique ID)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. style_words_1"
+                                                value={q.key}
+                                                onChange={(e) => {
+                                                    const newVal = e.target.value;
+                                                    setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, key: newVal } : item));
+                                                }}
+                                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold font-mono"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">User Label</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. What is your first word?"
+                                                value={q.label}
+                                                onChange={(e) => {
+                                                    const newVal = e.target.value;
+                                                    setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, label: newVal } : item));
+                                                }}
+                                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">Placeholder</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Elegant..."
+                                                value={q.placeholder}
+                                                onChange={(e) => {
+                                                    const newVal = e.target.value;
+                                                    setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, placeholder: newVal } : item));
+                                                }}
+                                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Essence Mapping Control */}
+                                    <div className="pt-2 border-t border-ac-taupe/5">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <input
+                                                type="checkbox"
+                                                id={`map-${i}`}
+                                                checked={q.mapToEssence || false}
+                                                onChange={(e) => {
+                                                    const val = e.target.checked;
+                                                    setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, mapToEssence: val } : item));
+                                                }}
+                                                className="w-4 h-4 accent-ac-gold cursor-pointer"
+                                            />
+                                            <label htmlFor={`map-${i}`} className="text-xs font-bold text-ac-taupe/80 cursor-pointer select-none">
+                                                Map to Style Essence Profile
+                                            </label>
+                                        </div>
+
+                                        {(q as any).mapToEssence && (
+                                            <div className="pl-6 animate-in slide-in-from-top-2 fade-in duration-200">
+                                                <label className="text-[10px] text-ac-taupe/40 uppercase font-bold block mb-1">Target Category</label>
+                                                <select
+                                                    value={(q as any).mappingCategory || 'style_words'}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, mappingCategory: val } : item));
+                                                    }}
+                                                    className="w-full bg-ac-gold/10 border border-ac-gold/20 rounded-sm p-2 text-xs text-ac-taupe focus:outline-none focus:border-ac-gold font-bold"
+                                                >
+                                                    <option value="style_words">Three Style Words - Profile Title</option>
+                                                    <option value="archetype">Style Archetype - Golden Words</option>
+                                                    <option value="power_features">Power Features - Supporting Details</option>
+                                                    <option value="color_energy">Color Energy - Supporting Details</option>
+                                                </select>
+                                                <p className="text-[9px] text-ac-taupe/50 mt-1 italic">
+                                                    Answers to this question will dynamically appear in the User's Profile Header.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -533,6 +633,92 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                     </div>
                 </div>
             </div>
+
+            {/* Monetization - Only if NOT linked to a Masterclass */}
+            {!formData.masterclassId && (
+                <div className="p-6 bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm">
+                    <h3 className="font-serif text-xl text-ac-taupe border-b border-ac-taupe/10 pb-3 mb-4">
+                        Monetization
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="md:col-span-2 bg-ac-taupe/5 p-4 rounded-sm border border-ac-taupe/10">
+                            <h4 className="text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-3">Stripe Integration</h4>
+
+                            <div className="flex gap-4 items-end mb-4">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                                        Generator Price (USD)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        placeholder="50"
+                                        className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-2 text-sm"
+                                        id="gen-price-input-chapter"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const priceInput = document.getElementById('gen-price-input-chapter') as HTMLInputElement;
+                                        const price = parseFloat(priceInput.value);
+                                        if (!formData.title) {
+                                            toast.error("Please enter a Title first");
+                                            return;
+                                        }
+                                        if (!price || price <= 0) {
+                                            toast.error("Please enter a valid price");
+                                            return;
+                                        }
+
+                                        const toastId = toast.loading("Generating Stripe Product...");
+                                        const { createStripeProduct } = await import('@/app/actions/admin/stripe-product');
+                                        // Use category as type (masterclass/course) or default to chapter
+                                        const type = (formData.category === 'course' ? 'course' : 'chapter') as any;
+                                        const res = await createStripeProduct(formData.title, price, type);
+
+                                        if (res.success && res.productId && res.priceId) {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                stripeProductId: res.productId!,
+                                                priceId: res.priceId!
+                                            }));
+                                            toast.success("Stripe Product Created!", { id: toastId });
+                                        } else {
+                                            toast.error(res.error || "Failed to generate", { id: toastId });
+                                        }
+                                    }}
+                                    className="px-4 py-2 bg-ac-gold text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-ac-gold/80 h-[38px]"
+                                >
+                                    Generate
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Product ID</label>
+                                    <input
+                                        type="text"
+                                        value={formData.stripeProductId}
+                                        onChange={(e) => setFormData({ ...formData, stripeProductId: e.target.value })}
+                                        className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-sm"
+                                        placeholder="prod_..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Price ID</label>
+                                    <input
+                                        type="text"
+                                        value={formData.priceId}
+                                        onChange={(e) => setFormData({ ...formData, priceId: e.target.value })}
+                                        className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-sm"
+                                        placeholder="price_..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-4 justify-end border-t border-ac-taupe/10 pt-6">

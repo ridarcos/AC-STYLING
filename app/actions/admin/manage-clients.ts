@@ -88,3 +88,42 @@ export async function getClientDossier(userId: string) {
 
     return { success: true, dossier: responses };
 }
+
+/**
+ * Toggles Studio Access (Wardrobe + Lookbook) for a client.
+ * Manual Override for Admins.
+ */
+export async function toggleStudioAccess(userId: string, hasAccess: boolean) {
+    const supabase = await createClient();
+
+    // Auth check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Unauthorized' };
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (profile?.role !== 'admin') return { success: false, error: 'Forbidden' };
+
+    const permissions = hasAccess
+        ? { lookbook: true, wardrobe: true }
+        : { lookbook: false, wardrobe: false };
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({
+            studio_permissions: permissions,
+            active_studio_client: hasAccess
+        })
+        .eq('id', userId);
+
+    if (error) {
+        console.error("Error updating permissions:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}

@@ -1,13 +1,22 @@
 
 import { Link } from "@/i18n/routing";
-import { ArrowLeft, PlayCircle, FolderOpen, Check } from "lucide-react";
+import { ArrowLeft, PlayCircle, FolderOpen, Check, Lock, Unlock } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { checkAccess } from "@/utils/access-control";
+import UnlockButton from "@/components/monetization/UnlockButton";
+
+export const dynamic = 'force-dynamic';
 
 export default async function MasterclassPage({ params }: { params: Promise<{ id: string, locale: string }> }) {
     const { id, locale } = await params;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Ensure we don't treat anonymous users as "logged in" for purchase flow
+    const isAuthenticated = user && !user.is_anonymous;
+
+    console.log(`[MasterclassPage] ID: ${id}, User found: ${!!user}`, user?.email);
 
     // 1. Fetch Masterclass Details
     const { data: masterclass, error: mcError } = await supabase
@@ -20,6 +29,9 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
         redirect('/vault/foundations');
     }
 
+    // Check Access
+    const hasAccess = user ? await checkAccess(user.id, masterclass.id) : false;
+
     // 2. Fetch Chapters in this Masterclass
     const { data: chapters } = await supabase
         .from('chapters')
@@ -29,6 +41,8 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
 
     // 3. User Progress Logic
     const completedChapters = new Set();
+    let firstIncompleteSlug = chapters?.[0]?.slug;
+
     if (user) {
         const { data: progress } = await supabase
             .from('user_progress')
@@ -41,6 +55,10 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                 completedChapters.add(slug);
             }
         });
+
+        // Find first incomplete
+        const firstIncomplete = chapters?.find(c => !completedChapters.has(c.slug));
+        if (firstIncomplete) firstIncompleteSlug = firstIncomplete.slug;
     }
 
     const totalChapters = chapters?.length || 0;
@@ -58,12 +76,17 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
 
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                     {/* Thumbnail */}
-                    <div className="w-full md:w-1/3 aspect-video rounded-sm overflow-hidden shadow-lg">
+                    <div className="w-full md:w-1/3 aspect-video rounded-sm overflow-hidden shadow-lg relative group">
                         <img
                             src={masterclass.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
                             alt={masterclass.title}
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover transition-all duration-700 ${!hasAccess ? 'group-hover:scale-105 filter brightness-75' : ''}`}
                         />
+                        {!hasAccess && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                                <Lock className="text-white/80 w-12 h-12" />
+                            </div>
+                        )}
                     </div>
 
                     {/* Info */}
@@ -78,18 +101,36 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                             {masterclass.description}
                         </p>
 
-                        {/* Progress Bar */}
-                        <div className="max-w-md">
-                            <div className="flex justify-between text-xs uppercase tracking-widest text-ac-taupe/60 mb-2">
-                                <span>Progress</span>
-                                <span>{completedCount} / {totalChapters} Lessons</span>
-                            </div>
-                            <div className="h-1 w-full bg-ac-taupe/10 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-ac-gold transition-all duration-500"
-                                    style={{ width: `${progressPercent}%` }}
+                        {/* CTA / Progress Bar */}
+                        <div className="max-w-md space-y-6">
+                            {hasAccess ? (
+                                <>
+                                    <div className="flex justify-between text-xs uppercase tracking-widest text-ac-taupe/60 mb-2">
+                                        <span>Progress</span>
+                                        <span>{completedCount} / {totalChapters} Lessons</span>
+                                    </div>
+                                    <div className="h-1 w-full bg-ac-taupe/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-ac-gold transition-all duration-500"
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+
+                                    <Link
+                                        href={`/vault/foundations/${firstIncompleteSlug}`}
+                                        className="inline-flex items-center gap-2 bg-ac-taupe text-white px-6 py-3 rounded-sm hover:bg-ac-olive transition-colors uppercase tracking-widest text-xs font-bold"
+                                    >
+                                        <PlayCircle size={16} />
+                                        Continue Learning
+                                    </Link>
+                                </>
+                            ) : (
+                                <UnlockButton
+                                    priceId={masterclass.price_id}
+                                    isLoggedIn={!!isAuthenticated}
+                                    returnUrl={`/vault/foundations/masterclass/${id}`}
                                 />
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -99,15 +140,16 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
                 {chapters && chapters.map((chapter, index) => {
                     const isCompleted = completedChapters.has(chapter.slug);
-                    return (
-                        <Link href={`/vault/foundations/${chapter.slug}`} key={chapter.id} className="group block">
+
+                    const CardContent = (
+                        <>
                             <div className="relative aspect-video overflow-hidden rounded-sm mb-3 bg-ac-sand/20">
                                 <div className="absolute inset-0 bg-ac-taupe/10 group-hover:bg-transparent transition-colors z-10" />
                                 {chapter.thumbnail_url ? (
                                     <img
                                         src={chapter.thumbnail_url}
                                         alt={chapter.title}
-                                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                                        className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${hasAccess ? 'grayscale group-hover:grayscale-0' : 'grayscale filter contrast-75'}`}
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-ac-taupe/20">
@@ -116,31 +158,49 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                                 )}
 
                                 <div className="absolute top-2 right-2 z-30">
-                                    {isCompleted ? (
-                                        <div className="bg-ac-olive text-white p-1 rounded-full shadow-md">
-                                            <Check size={14} />
-                                        </div>
+                                    {hasAccess ? (
+                                        isCompleted ? (
+                                            <div className="bg-ac-olive text-white p-1 rounded-full shadow-md">
+                                                <Check size={14} />
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-sm text-white/80 text-[10px] uppercase font-bold">
+                                                {index + 1}
+                                            </div>
+                                        )
                                     ) : (
-                                        <div className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-sm text-white/80 text-[10px] uppercase font-bold">
-                                            {index + 1}
+                                        <div className="bg-black/40 backdrop-blur-md p-1.5 rounded-full text-white/80">
+                                            <Lock size={12} />
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                                    <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full border border-white/40">
-                                        <PlayCircle size={24} className="text-white" />
+                                {hasAccess && (
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                                        <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full border border-white/40">
+                                            <PlayCircle size={24} className="text-white" />
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
-                            <h3 className="font-serif text-xl text-ac-taupe group-hover:text-ac-olive transition-colors">
+                            <h3 className="font-serif text-xl text-ac-taupe group-hover:text-ac-olive transition-colors flex items-center gap-2">
                                 {chapter.title}
                             </h3>
                             <p className="text-sm text-ac-taupe/60 line-clamp-1 mt-1">
                                 {chapter.subtitle}
                             </p>
+                        </>
+                    );
+
+                    return hasAccess ? (
+                        <Link href={`/vault/foundations/${chapter.slug}`} key={chapter.id} className="group block relative">
+                            {CardContent}
                         </Link>
+                    ) : (
+                        <div key={chapter.id} className="group block relative opacity-70 cursor-not-allowed">
+                            {CardContent}
+                        </div>
                     );
                 })}
             </div>

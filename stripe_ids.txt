@@ -1,0 +1,2 @@
+stripe_product_id: prod_TsiyStOizckbZe
+price_id: price_1SuxWnGg4NoVaWzLItz4Ptmu

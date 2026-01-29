@@ -40,6 +40,8 @@ export async function createChapter(formData: FormData) {
     const masterclassId = formData.get('masterclassId') as string || null;
     // If masterclassId is present, it's NOT standalone. If absent, check explicit toggle or default to true.
     const isStandalone = masterclassId ? false : (formData.get('isStandalone') === 'true');
+    const stripeProductId = formData.get('stripeProductId') as string;
+    const priceId = formData.get('priceId') as string;
 
     // Parse JSON fields
     const labQuestions = JSON.parse(formData.get('labQuestions') as string || '[]');
@@ -63,11 +65,12 @@ export async function createChapter(formData: FormData) {
             is_standalone: isStandalone,
             lab_questions: labQuestions,
             takeaways: takeaways,
-            resource_urls: resourceUrls
+            resource_urls: resourceUrls,
+            stripe_product_id: stripeProductId,
+            price_id: priceId
         })
         .select()
         .single();
-
     if (chapterError) {
         console.error("Chapter creation error:", chapterError);
         return { success: false, error: chapterError.message };
@@ -80,7 +83,6 @@ export async function createChapter(formData: FormData) {
 
     return { success: true, chapter };
 }
-
 export async function updateChapter(chapterId: string, formData: FormData) {
     const { authorized, supabase } = await checkAdmin();
     if (!authorized) {
@@ -98,6 +100,8 @@ export async function updateChapter(chapterId: string, formData: FormData) {
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
     const masterclassId = formData.get('masterclassId') as string || null;
     const isStandalone = masterclassId ? false : (formData.get('isStandalone') === 'true');
+    const stripeProductId = formData.get('stripeProductId') as string;
+    const priceId = formData.get('priceId') as string;
 
     const labQuestions = JSON.parse(formData.get('labQuestions') as string || '[]');
     const takeaways = JSON.parse(formData.get('takeaways') as string || '[]');
@@ -121,6 +125,8 @@ export async function updateChapter(chapterId: string, formData: FormData) {
             lab_questions: labQuestions,
             takeaways: takeaways,
             resource_urls: resourceUrls,
+            stripe_product_id: stripeProductId,
+            price_id: priceId,
             updated_at: new Date().toISOString()
         })
         .eq('id', chapterId);

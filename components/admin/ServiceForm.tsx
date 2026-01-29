@@ -25,10 +25,12 @@ export default function ServiceForm({ service, onSuccess, onCancel }: ServiceFor
         priceDisplay: service?.price_display || '',
         priceId: service?.price_id || '',
         stripeUrl: service?.stripe_url || '',
+        stripeProductId: service?.stripe_product_id || '',
         imageUrl: service?.image_url || '',
         type: service?.type || 'session',
         orderIndex: service?.order_index || 0,
         active: service?.active ?? true,
+        unlocksStudioAccess: service?.unlocks_studio_access ?? false,
     });
 
     const [tags, setTags] = useState<string[]>(service?.recommendation_tags || []);
@@ -44,10 +46,12 @@ export default function ServiceForm({ service, onSuccess, onCancel }: ServiceFor
                 priceDisplay: service.price_display || '',
                 priceId: service.price_id || '',
                 stripeUrl: service.stripe_url || '',
+                stripeProductId: service.stripe_product_id || '',
                 imageUrl: service.image_url || '',
                 type: service.type || 'session',
                 orderIndex: service.order_index || 0,
                 active: service.active ?? true,
+                unlocksStudioAccess: service.unlocks_studio_access ?? false,
             });
             setTags(service.recommendation_tags || []);
         }
@@ -101,6 +105,7 @@ export default function ServiceForm({ service, onSuccess, onCancel }: ServiceFor
             stripe_url: formData.stripeUrl,
             image_url: formData.imageUrl,
             order_index: formData.orderIndex,
+            unlocks_studio_access: formData.unlocksStudioAccess,
         };
 
         // Remove camelCase keys that don't match DB columns if upsert is strict, 
@@ -113,10 +118,12 @@ export default function ServiceForm({ service, onSuccess, onCancel }: ServiceFor
             price_display: payload.priceDisplay,
             price_id: payload.priceId,
             stripe_url: payload.stripeUrl,
+            stripe_product_id: payload.stripeProductId,
             image_url: payload.imageUrl,
             type: payload.type,
             order_index: payload.orderIndex,
             active: payload.active,
+            unlocks_studio_access: payload.unlocks_studio_access,
             recommendation_tags: tags,
         };
 
@@ -204,6 +211,24 @@ export default function ServiceForm({ service, onSuccess, onCancel }: ServiceFor
                             Active (Visible to public)
                         </label>
                     </div>
+
+                    <div className="flex items-center gap-3 bg-ac-gold/10 p-4 rounded-sm border border-ac-gold/20">
+                        <input
+                            type="checkbox"
+                            id="unlocksStudio"
+                            checked={formData.unlocksStudioAccess}
+                            onChange={(e) => setFormData({ ...formData, unlocksStudioAccess: e.target.checked })}
+                            className="w-5 h-5 accent-ac-gold cursor-pointer"
+                        />
+                        <div>
+                            <label htmlFor="unlocksStudio" className="block text-sm font-bold text-ac-taupe cursor-pointer">
+                                Unlocks Studio Access
+                            </label>
+                            <p className="text-[10px] text-ac-taupe/60 uppercase tracking-widest mt-1">
+                                Automatically grants Wardrobe + Lookbook access on purchase
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right: Details */}
@@ -276,22 +301,95 @@ export default function ServiceForm({ service, onSuccess, onCancel }: ServiceFor
 
                     <div className="space-y-4 bg-ac-taupe/5 p-4 rounded-sm">
                         <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest">
-                            Payment Details
+                            Stripe Integration & Payment
                         </label>
-                        <input
-                            type="text"
-                            value={formData.stripeUrl}
-                            onChange={(e) => setFormData({ ...formData, stripeUrl: e.target.value })}
-                            placeholder="https://buy.stripe.com/..."
-                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
-                        />
-                        <input
-                            type="text"
-                            value={formData.priceId}
-                            onChange={(e) => setFormData({ ...formData, priceId: e.target.value })}
-                            placeholder="price_12345 (Optional API ref)"
-                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
-                        />
+
+                        {/* Generator */}
+                        <div className="flex gap-4 items-end mb-4 border-b border-ac-taupe/5 pb-4">
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                                    Generator Price (USD)
+                                </label>
+                                <input
+                                    type="number"
+                                    placeholder="500"
+                                    className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-2 text-sm"
+                                    id="gen-price-input-service"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const priceInput = document.getElementById('gen-price-input-service') as HTMLInputElement;
+                                    const price = parseFloat(priceInput.value);
+                                    if (!formData.title) {
+                                        toast.error("Please enter a Title first");
+                                        return;
+                                    }
+                                    if (!price || price <= 0) {
+                                        toast.error("Please enter a valid price");
+                                        return;
+                                    }
+
+                                    const toastId = toast.loading("Generating Stripe Product...");
+                                    const { createStripeProduct } = await import('@/app/actions/admin/stripe-product');
+                                    const res = await createStripeProduct(formData.title, price, 'service');
+
+                                    if (res.success && res.productId && res.priceId) {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            stripeProductId: res.productId!,
+                                            priceId: res.priceId!
+                                        }));
+                                        toast.success("Stripe Product Created!", { id: toastId });
+                                    } else {
+                                        toast.error(res.error || "Failed to generate", { id: toastId });
+                                    }
+                                }}
+                                className="px-4 py-2 bg-ac-gold text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-ac-gold/80 h-[38px]"
+                            >
+                                Generate
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                                    Stripe Product ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.stripeProductId}
+                                    onChange={(e) => setFormData({ ...formData, stripeProductId: e.target.value })}
+                                    placeholder="prod_..."
+                                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold font-mono"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                                    Stripe Price ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.priceId}
+                                    onChange={(e) => setFormData({ ...formData, priceId: e.target.value })}
+                                    placeholder="price_..."
+                                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold font-mono"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                                    Direct Payment Link (Legacy)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.stripeUrl}
+                                    onChange={(e) => setFormData({ ...formData, stripeUrl: e.target.value })}
+                                    placeholder="https://buy.stripe.com/..."
+                                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-4">
