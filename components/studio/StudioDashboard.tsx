@@ -10,6 +10,7 @@ import VirtualWardrobe from "./VirtualWardrobe";
 import DigitalLookbook from "./DigitalLookbook";
 import ArchiveManager from "./ArchiveManager";
 import { updateProfileStatus } from "@/app/actions/studio";
+import { createWardrobe } from "@/app/actions/wardrobes";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import UserAssignmentModal from "./UserAssignmentModal";
@@ -174,7 +175,7 @@ export default function StudioDashboard({ locale }: StudioDashboardProps) {
                                         setIsCreating(true);
 
                                         // Create a wardrobe instead of a ghost profile
-                                        const { createWardrobe } = await import("@/app/actions/wardrobes");
+                                        // Dynamic import removed - createWardrobe is now statically imported
                                         const result = await createWardrobe(newClientName);
 
                                         if (result.success) {
