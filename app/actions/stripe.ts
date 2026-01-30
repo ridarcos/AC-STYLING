@@ -42,7 +42,7 @@ export async function createCheckoutSession(priceId: string, returnUrl: string) 
                     quantity: 1,
                 },
             ],
-            success_url: `${origin}${returnUrl}`,
+            success_url: `${origin}${returnUrl}?checkout_success=true`,
             cancel_url: `${origin}${returnUrl}`,
             client_reference_id: user.id,
             metadata: {
@@ -62,8 +62,8 @@ export async function createCheckoutSession(priceId: string, returnUrl: string) 
         }
 
         return { url: session.url };
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Stripe Checkout Error:', err);
-        return { error: err.message };
+        return { error: (err as Error).message };
     }
 }

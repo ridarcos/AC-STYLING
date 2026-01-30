@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import { stripe } from '@/utils/stripe';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { grantAccessForProduct } from '@/app/lib/access-logic';
 import Stripe from 'stripe';
 
 export async function POST(req: Request) {
@@ -29,16 +30,38 @@ export async function POST(req: Request) {
     // Use Admin Client to bypass RLS for Webhook operations
     const supabase = createAdminClient();
 
+    // Helper to log to DB
+    const logEvent = async (status: string, message?: string, details?: any) => {
+        try {
+            await supabase.from('webhook_events').insert({
+                event_type: event?.type || 'unknown',
+                payload: details || (event?.data?.object),
+                status,
+                error_message: message
+            });
+        } catch (e) {
+            console.error('Failed to log webhook event:', e);
+        }
+    };
+
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
+        // Fallback: Check metadata if client_reference_id is missing
         const userId = session.client_reference_id;
         const finalUserId = userId || session.metadata?.userId;
 
         console.log(`[Stripe Webhook] Session Info: SessionID=${session.id}, UserID=${finalUserId}`);
+        await logEvent('processing', `Started for User ${finalUserId || 'UNKNOWN'}`, {
+            session_id: session.id,
+            user_id: finalUserId,
+            client_ref: userId,
+            metadata: session.metadata
+        });
 
         if (!finalUserId) {
             console.error('[Stripe Webhook] No userId found in session');
-            return new Response('No userId', { status: 200 });
+            await logEvent('error', 'No userId found in session', { session_dump: session });
+            return new Response('No userId', { status: 200 }); // Return 200 to acknowledge Stripe
         }
 
         try {
@@ -48,11 +71,15 @@ export async function POST(req: Request) {
                 // Handle both expanded object and string ID
                 const stripeProductId = typeof item.price?.product === 'string'
                     ? item.price?.product
-                    : (item.price?.product as any)?.id;
+                    : (item.price?.product as Stripe.Product)?.id;
 
                 console.log(`[Stripe Webhook] Processing Item: ProductID=${stripeProductId}, UserID=${finalUserId}`);
+                await logEvent('item_processing', `Processing Item ${stripeProductId}`, { product_id: stripeProductId });
 
-                if (!stripeProductId) continue;
+                if (!stripeProductId) {
+                    await logEvent('warning', 'Item has no Product ID');
+                    continue;
+                }
 
                 // 1. Log Purchase
                 const { error: purchaseError } = await supabase.from('purchases').insert({
@@ -63,90 +90,27 @@ export async function POST(req: Request) {
                     status: 'completed'
                 });
 
-                if (purchaseError) console.error('[Stripe Webhook] Purchase Insert Error:', purchaseError);
+                if (purchaseError) {
+                    console.error('[Stripe Webhook] Purchase Insert Error:', purchaseError);
+                    await logEvent('error', `Purchase Insert Failed: ${purchaseError.message}`);
+                }
 
                 // 2. Grant Access Logic
-                const FULL_UNLOCK_PRODUCT_ID = process.env.STRIPE_FULL_ACCESS_PRODUCT_ID;
+                const granted = await grantAccessForProduct(
+                    supabase,
+                    finalUserId,
+                    stripeProductId,
+                    logEvent
+                );
 
-                if (stripeProductId === FULL_UNLOCK_PRODUCT_ID) {
-                    // Check Legacy ENV first
-                    console.log('[Stripe Webhook] Granting FULL ACCESS (Env Match)');
-                    await supabase.from('profiles')
-                        .update({ has_full_unlock: true })
-                        .eq('id', finalUserId);
-                } else {
-                    // Check if matched to dynamic Offer (Full Access)
-                    const { data: offer } = await supabase
-                        .from('offers')
-                        .select('slug')
-                        .eq('stripe_product_id', stripeProductId)
-                        .eq('active', true)
-                        .maybeSingle();
-
-                    if (offer && offer.slug === 'full_access') {
-                        console.log('[Stripe Webhook] Granting FULL ACCESS (Offer Match)');
-                        await supabase.from('profiles')
-                            .update({ has_full_unlock: true })
-                            .eq('id', finalUserId);
-                        continue;
-                    }
-
-                    if (offer && offer.slug === 'course_pass') {
-                        console.log('[Stripe Webhook] Granting COURSE PASS (Offer Match)');
-                        await supabase.from('profiles')
-                            .update({ has_course_pass: true })
-                            .eq('id', finalUserId);
-                        continue;
-                    }
-
-                    // Try Masterclass
-                    const { data: masterclass, error: mcError } = await supabase
-                        .from('masterclasses')
-                        .select('id, title')
-                        .eq('stripe_product_id', stripeProductId)
-                        .maybeSingle();
-
-                    if (masterclass) {
-                        console.log(`[Stripe Webhook] Matched Masterclass: ${masterclass.title} (${masterclass.id})`);
-                        const { error: grantError } = await supabase.from('user_access_grants').insert({
-                            user_id: finalUserId,
-                            masterclass_id: masterclass.id,
-                            grant_type: 'purchase'
-                        });
-                        if (grantError) console.error('[Stripe Webhook] Masterclass Grant Error:', grantError);
-                        else console.log('[Stripe Webhook] Masterclass Grant SUCCESS');
-                        continue;
-                    } else if (mcError) {
-                        // Only log real errors, not "no rows found" if handled by maybeSingle
-                        console.error('[Stripe Webhook] Masterclass lookup error:', mcError);
-                    }
-
-                    // Try Chapter/Course
-                    const { data: chapter, error: chError } = await supabase
-                        .from('chapters')
-                        .select('id, title')
-                        .eq('stripe_product_id', stripeProductId)
-                        .maybeSingle();
-
-                    if (chapter) {
-                        console.log(`[Stripe Webhook] Matched Chapter: ${chapter.title} (${chapter.id})`);
-                        const { error: grantError } = await supabase.from('user_access_grants').insert({
-                            user_id: finalUserId,
-                            chapter_id: chapter.id,
-                            grant_type: 'purchase'
-                        });
-                        if (grantError) console.error('[Stripe Webhook] Chapter Grant Error:', grantError);
-                        else console.log('[Stripe Webhook] Chapter Grant SUCCESS');
-                        continue;
-                    } else if (chError) {
-                        console.error('[Stripe Webhook] Chapter lookup error:', chError);
-                    }
-
+                if (!granted) {
                     console.log(`[Stripe Webhook] No matching content found for Product ID: ${stripeProductId}`);
+                    await logEvent('warning', `No content match for Product ID: ${stripeProductId}`);
                 }
             }
         } catch (err: any) {
             console.error('Error processing checkout session:', err);
+            await logEvent('fatal_error', err.message);
             return new Response('Error processing session', { status: 500 });
         }
     }

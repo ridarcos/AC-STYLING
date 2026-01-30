@@ -29,8 +29,8 @@ export default function ClientList({ onSelectClient }: ClientListProps) {
 
         // Filter by Search
         if (!search) return true;
-        const nameMatch = c.full_name?.toLowerCase().includes(search.toLowerCase());
-        const usernameMatch = c.username?.toLowerCase().includes(search.toLowerCase());
+        const nameMatch = (c.full_name || '').toLowerCase().includes(search.toLowerCase());
+        const usernameMatch = (c.username || '').toLowerCase().includes(search.toLowerCase());
         return nameMatch || usernameMatch;
     });
 
@@ -144,6 +144,22 @@ export default function ClientList({ onSelectClient }: ClientListProps) {
                                 <Eye size={14} />
                                 View Dossier
                             </button>
+
+                            {/* Copy Wardrobe Link for Active Clients */}
+                            {client.active_studio_client && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const link = `${window.location.origin}/vault/profile`;
+                                        navigator.clipboard.writeText(link);
+                                        toast.success("Wardrobe Link Copied to Clipboard");
+                                    }}
+                                    className="p-2 border border-ac-taupe/10 rounded-full text-ac-taupe/40 hover:text-ac-gold hover:border-ac-gold transition-colors"
+                                    title="Copy Personal Wardrobe Link"
+                                >
+                                    <Sparkles size={14} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}

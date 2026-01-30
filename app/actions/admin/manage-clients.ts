@@ -125,5 +125,19 @@ export async function toggleStudioAccess(userId: string, hasAccess: boolean) {
         return { success: false, error: error.message };
     }
 
+    // If granting access, we MUST ensure the Tailor Card exists.
+    // The DB trigger checks active_studio_client = TRUE, which we just set.
+    if (hasAccess) {
+        const { error: cardError } = await supabase
+            .from('tailor_cards')
+            .upsert({ user_id: userId }, { onConflict: 'user_id' });
+
+        if (cardError) {
+            console.error("Error creating tailor card:", cardError);
+            // We won't fail the whole operation, but it's worth noting.
+            // The user can likely recover by toggling off/on or checking the profile.
+        }
+    }
+
     return { success: true };
 }

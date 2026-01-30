@@ -37,8 +37,20 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
         );
     }
 
-    const labQuestions = chapter.lab_questions || [];
-    const takeaways = chapter.takeaways || [];
+    // Localize Content
+    const title = locale === 'es' && chapter.title_es ? chapter.title_es : chapter.title;
+    const subtitle = locale === 'es' && chapter.subtitle_es ? chapter.subtitle_es : chapter.subtitle;
+    const description = locale === 'es' && chapter.description_es ? chapter.description_es : chapter.description;
+    const labQuestionsRaw = chapter.lab_questions || [];
+    // Shared Key Strategy: We map over the SINGLE array of questions, but swap the label/placeholder if locale is ES.
+    const labQuestions = labQuestionsRaw.map((q: any) => ({
+        ...q,
+        label: (locale === 'es' && q.label_es) ? q.label_es : q.label,
+        placeholder: (locale === 'es' && q.placeholder_es) ? q.placeholder_es : q.placeholder
+    }));
+    const takeaways = (locale === 'es' && chapter.takeaways_es && chapter.takeaways_es.length > 0)
+        ? chapter.takeaways_es
+        : (chapter.takeaways || []);
     const resourceUrls = chapter.resource_urls || [];
 
     // Fetch User Data
@@ -50,19 +62,14 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
     // Check Access
     const hasAccess = user ? await checkAccess(user.id, chapter.id) : false;
 
-    const styleEssentials = {};
+
     let isCompleted = false;
 
     // Fetch Essence Lab Answers
     const essenceMap: Record<string, string> = {};
     if (user) {
-        // For standalone courses, the "masterclass_id" concept is fuzzy.
-        // We can use the chapter ID itself as the grouping ID in the DB, 
-        // or a dedicated "standalone" GUID if we want a global bucket.
-        // Plan: Use Chapter ID as the "Masterclass ID" for standalone items in the DB constraint.
-
+        // ... (lines 58-75) ...
         const targetMasterclassId = chapter.id; // Treat course itself as the container
-
         const { data: answers } = await supabase
             .from('essence_responses')
             .select('question_key, answer_value')
@@ -73,8 +80,6 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
             essenceMap[a.question_key] = a.answer_value;
         });
     }
-
-
 
     const { data: progress } = user ? await supabase
         .from('user_progress')
@@ -113,10 +118,10 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                             Standalone Course
                         </span>
                         <h1 className="font-serif text-3xl md:text-5xl text-ac-taupe">
-                            {chapter.title}
+                            {title}
                         </h1>
-                        {chapter.subtitle && (
-                            <p className="text-lg text-ac-gold/80 mt-2">{chapter.subtitle}</p>
+                        {subtitle && (
+                            <p className="text-lg text-ac-gold/80 mt-2">{subtitle}</p>
                         )}
                     </div>
                 </div>
@@ -136,14 +141,20 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                             priceId={chapter.price_id}
                             isLoggedIn={!!isAuthenticated}
                         >
-                            <VaultVideoPlayer videoId={chapter.video_id} videoIdEs={chapter.video_id_es} title={chapter.title} />
+                            <VaultVideoPlayer
+                                key={locale}
+                                videoId={chapter.video_id}
+                                videoIdEs={chapter.video_id_es}
+                                title={title}
+                                locale={locale}
+                            />
                         </InteractiveGate>
 
                         <div className="flex justify-between items-start">
                             <div className="prose prose-stone max-w-none flex-1">
                                 <h3 className="font-serif text-2xl text-ac-taupe mb-2">About this Course</h3>
                                 <div className="text-ac-taupe/80 leading-relaxed whitespace-pre-line">
-                                    {chapter.description || 'Course description available.'}
+                                    {description || 'Course description available.'}
                                 </div>
                             </div>
 

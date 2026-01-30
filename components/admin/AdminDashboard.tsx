@@ -16,13 +16,17 @@ import ServiceForm from "./ServiceForm";
 import { toast } from "sonner";
 import { Folder, FileVideo, Plus, Users, Tag, Sparkles } from "lucide-react";
 
+import StudioInbox from "./StudioInbox";
+
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'masterclasses' | 'chapters' | 'clients' | 'boutique' | 'services'>('masterclasses');
+    const [activeTab, setActiveTab] = useState<'inbox' | 'masterclasses' | 'chapters' | 'clients' | 'boutique' | 'services'>('inbox');
 
     // Data
     const [chapters, setChapters] = useState<any[]>([]);
     const [masterclasses, setMasterclasses] = useState<any[]>([]);
     const [services, setServices] = useState<any[]>([]);
+    // Inbox Count
+    const [inboxCount, setInboxCount] = useState(0);
 
     // Forms & Modals
     const [isCreating, setIsCreating] = useState(false);
@@ -35,10 +39,21 @@ export default function AdminDashboard() {
     const formRef = useRef<HTMLDivElement>(null);
 
     const loadData = async () => {
-        const [cRes, mRes, sRes] = await Promise.all([getChapters(), getMasterclasses(), getServices()]);
+        // Dynamically import to separate concerns? Or just call directly.
+        // We need getStudioInboxItems for the count.
+        const { getStudioInboxItems } = await import("@/app/actions/studio");
+
+        const [cRes, mRes, sRes, iRes] = await Promise.all([
+            getChapters(),
+            getMasterclasses(),
+            getServices(),
+            getStudioInboxItems()
+        ]);
+
         if (cRes.success) setChapters(cRes.chapters || []);
         if (mRes.success) setMasterclasses(mRes.masterclasses || []);
         if (sRes.success) setServices(sRes.services || []);
+        if (iRes.success) setInboxCount(iRes.data?.length || 0);
     };
 
     useEffect(() => {
@@ -85,6 +100,23 @@ export default function AdminDashboard() {
         <div className="space-y-8">
             {/* Tabs */}
             <div className="flex gap-4 border-b border-ac-taupe/10 overflow-x-auto">
+                <button
+                    onClick={() => { setActiveTab('inbox'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
+                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'inbox'
+                        ? 'text-ac-taupe border-b-2 border-ac-gold'
+                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
+                        }`}
+                >
+                    <div className="relative">
+                        <Users size={18} className="rotate-180" /> {/* Mock Inbox Icon */}
+                        {inboxCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-ac-gold text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                                {inboxCount}
+                            </span>
+                        )}
+                    </div>
+                    Inbox
+                </button>
                 <button
                     onClick={() => { setActiveTab('masterclasses'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'masterclasses'
@@ -139,7 +171,7 @@ export default function AdminDashboard() {
 
             {/* Action Bar */}
             {
-                activeTab !== 'clients' && activeTab !== 'boutique' && (
+                activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'inbox' && (
                     <div className="flex justify-between items-center">
                         <h2 className="font-serif text-3xl text-ac-taupe">
                             {activeTab === 'masterclasses' ? 'Masterclass Collections' :
@@ -179,7 +211,7 @@ export default function AdminDashboard() {
 
             {/* Form Area */}
             {
-                (isCreating || editingItem || editingOfferSlug) && activeTab !== 'clients' && activeTab !== 'boutique' && (
+                (isCreating || editingItem || editingOfferSlug) && activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'inbox' && (
                     <div ref={formRef} className="bg-white/40 backdrop-blur-md border border-ac-gold shadow-lg rounded-sm p-8">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-serif text-xl text-ac-taupe">
@@ -219,6 +251,12 @@ export default function AdminDashboard() {
             }
 
             {/* Views */}
+            {
+                activeTab === 'inbox' && (
+                    <StudioInbox />
+                )
+            }
+
             {
                 activeTab === 'masterclasses' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

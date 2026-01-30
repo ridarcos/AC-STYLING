@@ -35,7 +35,7 @@ export default function CoursePassUnlock({ userId, hasCoursePass }: { userId?: s
         try {
             const returnUrl = `/vault/courses`;
             const result = await createCheckoutSession(offer.price_id, returnUrl);
-            if (result.success && result.url) {
+            if (result.url) {
                 window.location.href = result.url;
             } else {
                 toast.error(result.error || "Checkout failed");

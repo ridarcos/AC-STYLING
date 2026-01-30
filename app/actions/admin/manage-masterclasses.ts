@@ -30,6 +30,9 @@ export async function createMasterclass(formData: FormData) {
     const title = formData.get('title') as string;
     const subtitle = formData.get('subtitle') as string;
     const description = formData.get('description') as string;
+    const titleEs = formData.get('titleEs') as string;
+    const subtitleEs = formData.get('subtitleEs') as string;
+    const descriptionEs = formData.get('descriptionEs') as string;
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
     const stripeProductId = formData.get('stripeProductId') as string;
@@ -41,6 +44,9 @@ export async function createMasterclass(formData: FormData) {
             title,
             subtitle,
             description,
+            title_es: titleEs,
+            subtitle_es: subtitleEs,
+            description_es: descriptionEs,
             thumbnail_url: thumbnailUrl,
             order_index: orderIndex,
             stripe_product_id: stripeProductId,
@@ -66,6 +72,9 @@ export async function updateMasterclass(id: string, formData: FormData) {
     const title = formData.get('title') as string;
     const subtitle = formData.get('subtitle') as string;
     const description = formData.get('description') as string;
+    const titleEs = formData.get('titleEs') as string;
+    const subtitleEs = formData.get('subtitleEs') as string;
+    const descriptionEs = formData.get('descriptionEs') as string;
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
     const stripeProductId = formData.get('stripeProductId') as string;
@@ -77,6 +86,9 @@ export async function updateMasterclass(id: string, formData: FormData) {
             title,
             subtitle,
             description,
+            title_es: titleEs,
+            subtitle_es: subtitleEs,
+            description_es: descriptionEs,
             thumbnail_url: thumbnailUrl,
             order_index: orderIndex,
             stripe_product_id: stripeProductId,

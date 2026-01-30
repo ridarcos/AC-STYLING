@@ -22,6 +22,7 @@ export default function ClientSwitcher({ onSelect, onAddClient, selectedId }: Cl
                 .from('profiles')
                 .select('*')
                 .eq('status', 'active')
+                .or('active_studio_client.eq.true,is_guest.eq.true')
                 .order('updated_at', { ascending: false });
 
             if (error) {

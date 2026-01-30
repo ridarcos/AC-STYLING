@@ -32,6 +32,9 @@ export async function createChapter(formData: FormData) {
     const title = formData.get('title') as string;
     const subtitle = formData.get('subtitle') as string;
     const description = formData.get('description') as string;
+    const titleEs = formData.get('titleEs') as string;
+    const subtitleEs = formData.get('subtitleEs') as string;
+    const descriptionEs = formData.get('descriptionEs') as string;
     const videoId = formData.get('videoId') as string;
     const videoIdEs = formData.get('videoIdEs') as string || null;
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
@@ -46,6 +49,7 @@ export async function createChapter(formData: FormData) {
     // Parse JSON fields
     const labQuestions = JSON.parse(formData.get('labQuestions') as string || '[]');
     const takeaways = JSON.parse(formData.get('takeaways') as string || '[]');
+    const takeawaysEs = JSON.parse(formData.get('takeawaysEs') as string || '[]');
     const resourceUrls = JSON.parse(formData.get('resourceUrls') as string || '[]');
 
     // Insert chapter with all data
@@ -56,6 +60,9 @@ export async function createChapter(formData: FormData) {
             title,
             subtitle,
             description,
+            title_es: titleEs,
+            subtitle_es: subtitleEs,
+            description_es: descriptionEs,
             video_id: videoId,
             video_id_es: videoIdEs,
             thumbnail_url: thumbnailUrl,
@@ -65,6 +72,7 @@ export async function createChapter(formData: FormData) {
             is_standalone: isStandalone,
             lab_questions: labQuestions,
             takeaways: takeaways,
+            takeaways_es: takeawaysEs,
             resource_urls: resourceUrls,
             stripe_product_id: stripeProductId,
             price_id: priceId
@@ -93,6 +101,9 @@ export async function updateChapter(chapterId: string, formData: FormData) {
     const title = formData.get('title') as string;
     const subtitle = formData.get('subtitle') as string;
     const description = formData.get('description') as string;
+    const titleEs = formData.get('titleEs') as string;
+    const subtitleEs = formData.get('subtitleEs') as string;
+    const descriptionEs = formData.get('descriptionEs') as string;
     const videoId = formData.get('videoId') as string;
     const videoIdEs = formData.get('videoIdEs') as string || null;
     const thumbnailUrl = formData.get('thumbnailUrl') as string;
@@ -105,6 +116,7 @@ export async function updateChapter(chapterId: string, formData: FormData) {
 
     const labQuestions = JSON.parse(formData.get('labQuestions') as string || '[]');
     const takeaways = JSON.parse(formData.get('takeaways') as string || '[]');
+    const takeawaysEs = JSON.parse(formData.get('takeawaysEs') as string || '[]');
     const resourceUrls = JSON.parse(formData.get('resourceUrls') as string || '[]');
 
     // Update chapter with all data
@@ -115,6 +127,9 @@ export async function updateChapter(chapterId: string, formData: FormData) {
             title,
             subtitle,
             description,
+            title_es: titleEs,
+            subtitle_es: subtitleEs,
+            description_es: descriptionEs,
             video_id: videoId,
             video_id_es: videoIdEs,
             thumbnail_url: thumbnailUrl,
@@ -124,6 +139,7 @@ export async function updateChapter(chapterId: string, formData: FormData) {
             is_standalone: isStandalone,
             lab_questions: labQuestions,
             takeaways: takeaways,
+            takeaways_es: takeawaysEs,
             resource_urls: resourceUrls,
             stripe_product_id: stripeProductId,
             price_id: priceId,

@@ -48,8 +48,8 @@ export async function generateInvitation(
 
         return { success: true, token: intakeToken };
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Invitation Error:", err);
-        return { success: false, error: err.message };
+        return { success: false, error: (err as Error).message };
     }
 }

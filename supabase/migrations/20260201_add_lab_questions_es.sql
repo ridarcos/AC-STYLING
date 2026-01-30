@@ -1,0 +1,1 @@
+-- DEPRECATED: We decided to store localized labels inside the main JSONB column to ensure shared Keys for answers.

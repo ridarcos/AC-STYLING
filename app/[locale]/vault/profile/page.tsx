@@ -24,7 +24,7 @@ async function getWardrobeItems(userId: string) {
 export default async function ProfileHub() {
     const hubData = await getProfileHubData();
 
-    if (!hubData) {
+    if (!hubData || !hubData.profile) {
         redirect('/login'); // Should not happen in guarded route
     }
 

@@ -58,10 +58,7 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
         return chaptersForMc.every(c => completedChapters.has(c.slug));
     };
 
-    // Default Images (Fallback)
-    const defaultImages = {
-        'dna': "https://images.unsplash.com/photo-1544413660-1775f02f9012?q=80&w=2070&auto=format&fit=crop",
-    };
+
 
     return (
         <section className="min-h-screen">
@@ -103,6 +100,9 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {masterclasses.map((mc, index) => {
                             const isCompleted = isMasterclassComplete(mc.id);
+                            const displayTitle = locale === 'es' && mc.title_es ? mc.title_es : mc.title;
+                            const displayDescription = locale === 'es' && mc.description_es ? mc.description_es : mc.description;
+                            const displayThumb = mc.thumbnail_url;
 
                             // If Guest, link goes to #upgrade (or we intercept it)
                             // We can use a simpler conditional: if guest, render a div that looks like a link but isn't, OR just disable the link.
@@ -112,8 +112,8 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                                     <div className="relative aspect-[16/9] overflow-hidden rounded-sm mb-3 shadow-md group-hover:shadow-xl transition-all duration-500">
                                         <div className="absolute inset-0 bg-ac-taupe/20 group-hover:bg-ac-taupe/0 transition-colors z-10" />
                                         <img
-                                            src={mc.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
-                                            alt={mc.title}
+                                            src={displayThumb || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
+                                            alt={displayTitle}
                                             className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${isGuest ? 'blur-[2px] grayscale' : 'grayscale group-hover:grayscale-0'}`}
                                         />
 
@@ -152,11 +152,11 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                                     </div>
 
                                     <h3 className="font-serif text-2xl text-ac-taupe group-hover:text-ac-olive transition-colors mb-1 flex items-center gap-2">
-                                        {mc.title}
+                                        {displayTitle}
                                         {isGuest && <span className="text-[10px] bg-ac-taupe/10 px-2 py-0.5 rounded-sm text-ac-taupe/60 uppercase font-bold tracking-normal">Locked</span>}
                                     </h3>
                                     <p className="text-ac-taupe/60 text-xs max-w-md line-clamp-2">
-                                        {mc.description}
+                                        {displayDescription}
                                     </p>
                                 </>
                             );

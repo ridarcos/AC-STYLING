@@ -69,7 +69,7 @@ export default function ArchiveManager({ onClose, onRefresh, locale }: ArchiveMa
     };
 
     const filtered = archivedClients.filter(c =>
-        c.full_name?.toLowerCase().includes(search.toLowerCase())
+        (c.full_name || '').toLowerCase().includes(search.toLowerCase())
     );
 
     return (

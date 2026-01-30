@@ -17,23 +17,46 @@ interface IntakeLandingProps {
 }
 
 export default function IntakeLanding({ token, clientName, locale, user }: IntakeLandingProps) {
-    // If user exists, go straight to upload. If not, show welcome/signup.
-    const [step, setStep] = useState<'welcome' | 'upload'>(user ? 'upload' : 'welcome');
-    // We don't need 'isGuest' anymore.
-
-    // Derived state or side-effect: if user prop changes (though this is a server prop, so page reload updates it), 
-    // update step?
-    // Actually, simple conditional rendering is better.
+    // Default to 'upload' so guests can interact immediately.
+    const [step, setStep] = useState<'upload' | 'signup'>('upload');
 
     return (
         <div className="w-full max-w-xl mx-auto relative">
             <AnimatePresence mode="wait">
-                {!user ? (
+                {step === 'upload' ? (
                     <motion.div
-                        key="welcome"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
+                        key="uploader"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="w-full"
+                    >
+                        {/* Header for Guest Context */}
+                        {
+                            !user && (
+                                <div className="mb-6 text-center">
+                                    <h1 className="font-serif text-3xl md:text-5xl text-ac-taupe mb-2">
+                                        Welcome, {clientName}.
+                                    </h1>
+                                    <p className="font-sans text-ac-taupe/70 text-xs font-bold uppercase tracking-widest">
+                                        Upload your wardrobe to begin
+                                    </p>
+                                </div>
+                            )
+                        }
+
+                        <IntakeUploader
+                            token={token}
+                            isGuest={!user}
+                            locale={locale}
+                            onUploadSuccess={() => setStep('signup')}
+                        />
+                    </motion.div >
+                ) : (
+                    <motion.div
+                        key="signup"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
                         className="bg-white/30 backdrop-blur-xl border border-white/40 p-10 md:p-16 rounded-sm shadow-2xl text-center"
                     >
                         {/* Header Content */}
@@ -46,12 +69,12 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                             <Sparkles className="text-ac-gold" size={32} />
                         </motion.div>
 
-                        <h1 className="font-serif text-3xl md:text-5xl text-ac-taupe mb-6 leading-tight">
-                            {clientName}, let's build your <span className="italic">Digital Wardrobe.</span>
-                        </h1>
+                        <h2 className="font-serif text-3xl text-ac-taupe mb-4 leading-tight">
+                            Assets Received.
+                        </h2>
 
                         <p className="font-sans text-ac-taupe/70 mb-8 tracking-wide uppercase text-xs font-bold">
-                            Initialize your secure studio portal to begin
+                            Secure your vault to save your digital wardrobe.
                         </p>
 
                         <SignupForm
@@ -62,23 +85,9 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                             }}
                         />
                     </motion.div>
-                ) : (
-                    <motion.div
-                        key="uploader"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="w-full"
-                    >
-                        <IntakeUploader
-                            token={token}
-                            isGuest={false} // Always authenticated now
-                            locale={locale}
-                        // No 'onJoinClick' needed as they are already joined
-                        />
-                    </motion.div>
                 )}
-            </AnimatePresence>
-        </div>
+            </AnimatePresence >
+        </div >
     );
 }
 
@@ -157,6 +166,19 @@ function SignupForm({ onComplete, defaultName, token }: { onComplete: () => void
                     {!isPending && <ArrowRight size={14} />}
                 </button>
             </form>
+
+            <div className="text-center mt-4 mb-6">
+                <button
+                    type="button"
+                    onClick={() => {
+                        const next = encodeURIComponent(window.location.pathname);
+                        window.location.href = `/login?next=${next}`;
+                    }}
+                    className="text-xs uppercase tracking-widest text-ac-taupe/60 hover:text-ac-gold font-bold transition-colors"
+                >
+                    Already have an account? <span className="underline decoration-1 underline-offset-4">Log In</span>
+                </button>
+            </div>
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">

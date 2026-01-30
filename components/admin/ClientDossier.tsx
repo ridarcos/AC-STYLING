@@ -4,6 +4,8 @@
 import { useState, useEffect } from "react";
 import { getClientDossier } from "@/app/actions/admin/manage-clients";
 import { X, Sparkles } from "lucide-react";
+import VirtualWardrobe from "@/components/studio/VirtualWardrobe";
+
 
 interface ClientDossierProps {
     client: any;
@@ -31,6 +33,8 @@ export default function ClientDossier({ client, onClose }: ClientDossierProps) {
         return acc;
     }, {} as Record<string, any[]>);
 
+    const [activeTab, setActiveTab] = useState<'essence' | 'wardrobe'>('essence');
+
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
             {/* Backdrop */}
@@ -56,49 +60,81 @@ export default function ClientDossier({ client, onClose }: ClientDossierProps) {
                 </div>
 
                 <div className="p-8 space-y-12">
-                    {loading ? (
-                        <div className="text-center py-20 text-ac-taupe/40">Loading dossier...</div>
-                    ) : dossier.length === 0 ? (
-                        <div className="text-center py-20 border-2 border-dashed border-ac-taupe/10 rounded-sm">
-                            <Sparkles className="mx-auto text-ac-taupe/20 mb-4" size={48} />
-                            <p className="text-ac-taupe/60">No essence data recorded yet.</p>
-                        </div>
-                    ) : (
-                        (Object.entries(grouped) as [string, any[]][]).map(([mcTitle, items]) => (
-                            <div key={mcTitle} className="space-y-6">
-                                <h3 className="font-serif text-2xl text-ac-taupe border-b border-ac-taupe/10 pb-2">
-                                    {mcTitle}
-                                </h3>
+                    <div className="flex gap-4 border-b border-ac-taupe/10 mb-6">
+                        <button
+                            onClick={() => setActiveTab('essence')}
+                            className={`pb-2 font-serif transition-colors ${activeTab === 'essence' ? 'border-b-2 border-ac-gold text-ac-taupe' : 'text-ac-taupe/40'}`}
+                        >
+                            Essence
+                        </button>
+                        <div className="text-ac-taupe/20 px-2">|</div>
+                        <button
+                            onClick={() => setActiveTab('wardrobe')}
+                            className={`pb-2 font-serif transition-colors ${activeTab === 'wardrobe' ? 'border-b-2 border-ac-gold text-ac-taupe' : 'text-ac-taupe/40'}`}
+                        >
+                            Wardrobe
+                        </button>
+                    </div>
 
-                                <div className="grid gap-6">
-                                    {items.map((item: any, i: number) => (
-                                        <div key={i} className="bg-white p-6 rounded-sm shadow-sm border border-ac-taupe/5">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <span className="text-xs uppercase tracking-widest text-ac-taupe/40 bg-ac-taupe/5 px-2 py-1 rounded-sm">
-                                                    {item.question_key.replace(/_/g, ' ')}
-                                                </span>
-                                                <span className="text-[10px] text-ac-taupe/30">
-                                                    {new Date(item.updated_at).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                            <div className="font-serif text-lg text-ac-taupe leading-relaxed">
-                                                {typeof item.answer_value === 'string'
-                                                    ? item.answer_value
-                                                    : JSON.stringify(item.answer_value)}
-                                            </div>
-                                            {item.chapter_slug && (
-                                                <p className="text-xs text-ac-taupe/30 mt-3 text-right">
-                                                    Context: {item.chapter_slug}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                    {activeTab === 'essence' && (
+                        loading ? (
+                            <div className="text-center py-20 text-ac-taupe/40">Loading dossier...</div>
+                        ) : dossier.length === 0 ? (
+                            <div className="text-center py-20 border-2 border-dashed border-ac-taupe/10 rounded-sm">
+                                <Sparkles className="mx-auto text-ac-taupe/20 mb-4" size={48} />
+                                <p className="text-ac-taupe/60">No essence data recorded yet.</p>
                             </div>
-                        ))
+                        ) : (
+                            (Object.entries(grouped) as [string, any[]][]).map(([mcTitle, items]) => (
+                                <div key={mcTitle} className="space-y-6">
+                                    <h3 className="font-serif text-2xl text-ac-taupe border-b border-ac-taupe/10 pb-2">
+                                        {mcTitle}
+                                    </h3>
+
+                                    <div className="grid gap-6">
+                                        {items.map((item: any, i: number) => (
+                                            <div key={i} className="bg-white p-6 rounded-sm shadow-sm border border-ac-taupe/5">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <span className="text-xs uppercase tracking-widest text-ac-taupe/40 bg-ac-taupe/5 px-2 py-1 rounded-sm">
+                                                        {item.question_key.replace(/_/g, ' ')}
+                                                    </span>
+                                                    <span className="text-[10px] text-ac-taupe/30">
+                                                        {new Date(item.updated_at).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <div className="font-serif text-lg text-ac-taupe leading-relaxed">
+                                                    {typeof item.answer_value === 'string'
+                                                        ? item.answer_value
+                                                        : JSON.stringify(item.answer_value)}
+                                                </div>
+                                                {item.chapter_slug && (
+                                                    <p className="text-xs text-ac-taupe/30 mt-3 text-right">
+                                                        Context: {item.chapter_slug}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )
                     )}
+
+                    {activeTab === 'wardrobe' && (
+                        /* Dynamic import to avoid circular dep issues if any, though VirtualWardrobe is client component */
+                        <VirtualWardrobeWrapper clientId={client.id} />
+                    )}
+
                 </div>
             </div>
+        </div>
+    );
+}
+
+function VirtualWardrobeWrapper({ clientId }: { clientId: string }) {
+    return (
+        <div className="bg-ac-taupe/5 p-4 rounded-sm -mx-4">
+            <VirtualWardrobe clientId={clientId} />
         </div>
     );
 }

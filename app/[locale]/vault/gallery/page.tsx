@@ -1,34 +1,21 @@
-import { getUserPurchases } from '@/app/actions/commerce';
 import Link from 'next/link';
-import { Lock, Play, ArrowRight } from 'lucide-react';
-
-
-// We need a Client Component wrapper for the Motion parts if we want to keep this Server Side for fetching
-// OR we make this a Server Component and put the Motion logic in a client child.
-// Let's keep it simple: Client Component for interactivity? 
-// The prompt implies we want to fetch purchases. Server Component is best for that.
-// So we'll fetch data here, then pass to a client grid component OR just render static HTML with client interactions?
-// Actually, using "use client" at top means it's a Client Component. `getUserPurchases` won't run directly if it uses headers/cookies unless called via Server Action or API. 
-// BUT: 'getUserPurchases' is marked 'use server', so we can call it from a Server Component.
-// So let's delete "use client" and make this a Server Component.
+import { Play, ArrowRight } from 'lucide-react';
 
 export default async function GalleryPage() {
-    const purchases = await getUserPurchases();
-
     // Map of product IDs to real content
+    // Showing a preview of the Masterclasses (Sample of 3)
     const MASTERCLASSES = [
         { id: 'style-audit', title: "The Wardrobe Audit", subtitle: "Foundation No. 1", videoId: "76979871" },
         { id: 'foundations', title: "Color Theory & You", subtitle: "Foundation No. 2", videoId: "76979871" },
         { id: 'silhouette', title: "Silhouettes & Shape", subtitle: "Foundation No. 3", videoId: "76979871" },
-        { id: 'editing', title: "The Art of Editing", subtitle: "Advanced Technique", videoId: "76979871" },
-        { id: 'sourcing', title: "Sourcing Vintage", subtitle: "Advanced Technique", videoId: "76979871" },
-        { id: 'transitions', title: "Seasonal Transitions", subtitle: "Mastery Series", videoId: "76979871" }
     ];
 
-    const isPurchased = (id: string) => purchases.includes(id);
+    // ANSWER TO QUESTION:
+    // This page is configured as a PUBLIC route in middleware.ts (lines 53-54), 
+    // so it DOES NOT require user access. It works as a landing page.
 
     return (
-        <div className="min-h-screen text-[#3D3630] -mt-24 pt-24"> {/* -mt-24 to counteract layout pt-24 if needed, or just let it stack */}
+        <div className="min-h-screen text-[#3D3630] -mt-24 pt-24">
             {/* Custom Header for Gallery Mode */}
             <div className="fixed top-0 left-0 w-full p-6 flex justify-between items-center z-50 bg-[#E6DED6]/80 backdrop-blur-sm pointer-events-none">
                 <div className="flex items-center gap-4 pointer-events-auto">
@@ -42,7 +29,7 @@ export default async function GalleryPage() {
                 </div>
             </div>
 
-            <section className="pt-12 pb-20 max-w-7xl mx-auto">
+            <section className="pt-12 pb-20 max-w-7xl mx-auto px-6">
                 <div className="flex flex-col lg:flex-row gap-12 mb-24">
                     {/* Left: Text Content */}
                     <div className="lg:w-1/2 flex flex-col justify-center">
@@ -80,51 +67,29 @@ export default async function GalleryPage() {
                 </div>
 
                 {/* The Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {MASTERCLASSES.map((item) => {
-                        const unlocked = isPurchased(item.id);
-                        return (
-                            <div key={item.id} className="group relative aspect-[3/4] overflow-hidden bg-[#3D3630]/5 border border-[#3D3630]/5 flex flex-col">
-                                {/* Thumbnail Area */}
-                                {/* Thumbnail Area */}
-                                <div className="flex-1 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-neutral-300"></div> {/* Placeholder Image */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {MASTERCLASSES.map((item) => (
+                        <Link
+                            key={item.id}
+                            href={`/vault/foundations/${item.id}`}
+                            className="group relative aspect-[3/4] overflow-hidden bg-[#3D3630]/5 border border-[#3D3630]/5 flex flex-col cursor-pointer"
+                        >
+                            {/* Thumbnail Area */}
+                            <div className="flex-1 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-neutral-300 transition-transform duration-700 group-hover:scale-105"></div> {/* Placeholder Image */}
 
-                                    {/* State Overlay */}
-                                    {/* Using absolute positioning and explicit z-index to avoid pointer-event conflicts */}
-                                    <div className={`
-                                        absolute inset-0 flex flex-col items-center justify-center p-6 text-center transition-all duration-500 z-10
-                                        ${unlocked ? 'bg-black/20 hover:bg-black/10' : 'backdrop-blur-md bg-[#E6DED6]/20 hover:backdrop-blur-[12px]'}
-                                     `}>
-                                        <div className={`
-                                            w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg transition-transform group-hover:scale-110
-                                            ${unlocked ? 'bg-[#C5A059] text-white' : 'bg-[#E6DED6]/90 text-[#3D3630]'}
-                                        `}>
-                                            {unlocked ? <Play fill="currentColor" size={16} /> : <Lock size={16} />}
-                                        </div>
-
-                                        <span className="text-[10px] uppercase tracking-widest text-white/90 drop-shadow-md font-bold mb-2">{item.subtitle}</span>
-                                        <h3 className="font-serif text-2xl text-white drop-shadow-md">{item.title}</h3>
-
-                                        {!unlocked && (
-                                            <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                                                <span className="bg-[#3D3630] text-[#E6DED6] px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm inline-flex items-center gap-2">
-                                                    Purchase Access <ArrowRight size={12} />
-                                                </span>
-                                            </div>
-                                        )}
+                                {/* Overlay */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 bg-black/20 hover:bg-black/10 transition-colors duration-500">
+                                    <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-lg transition-transform group-hover:scale-110 bg-[#C5A059] text-white">
+                                        <Play fill="currentColor" size={16} />
                                     </div>
-                                </div>
 
-                                {/* Link Logic */}
-                                {unlocked ? (
-                                    <Link href={`/vault/watch/${item.id}`} className="absolute inset-0 z-20 block" aria-label={`Watch ${item.title}`} />
-                                ) : (
-                                    <Link href={`/vault/checkout/${item.id}`} className="absolute inset-0 z-20 block" aria-label={`Purchase ${item.title}`} />
-                                )}
+                                    <span className="text-[10px] uppercase tracking-widest text-white/90 drop-shadow-md font-bold mb-2">{item.subtitle}</span>
+                                    <h3 className="font-serif text-2xl text-white drop-shadow-md">{item.title}</h3>
+                                </div>
                             </div>
-                        );
-                    })}
+                        </Link>
+                    ))}
                 </div>
             </section>
         </div>

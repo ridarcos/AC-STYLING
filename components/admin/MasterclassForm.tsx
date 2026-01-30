@@ -15,10 +15,14 @@ interface MasterclassFormProps {
 
 export default function MasterclassForm({ masterclass, onSuccess, onCancel }: MasterclassFormProps) {
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'en' | 'es'>('en');
     const [formData, setFormData] = useState({
         title: masterclass?.title || '',
         subtitle: masterclass?.subtitle || '',
         description: masterclass?.description || '',
+        titleEs: masterclass?.title_es || '',
+        subtitleEs: masterclass?.subtitle_es || '',
+        descriptionEs: masterclass?.description_es || '',
         thumbnailUrl: masterclass?.thumbnail_url || '',
         orderIndex: masterclass?.order_index || 0,
         stripeProductId: masterclass?.stripe_product_id || '',
@@ -32,6 +36,9 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
             title: masterclass?.title || '',
             subtitle: masterclass?.subtitle || '',
             description: masterclass?.description || '',
+            titleEs: masterclass?.title_es || '',
+            subtitleEs: masterclass?.subtitle_es || '',
+            descriptionEs: masterclass?.description_es || '',
             thumbnailUrl: masterclass?.thumbnail_url || '',
             orderIndex: masterclass?.order_index || 0,
             stripeProductId: masterclass?.stripe_product_id || '',
@@ -66,6 +73,9 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
         fd.append('title', formData.title);
         fd.append('subtitle', formData.subtitle);
         fd.append('description', formData.description);
+        fd.append('titleEs', formData.titleEs);
+        fd.append('subtitleEs', formData.subtitleEs);
+        fd.append('descriptionEs', formData.descriptionEs);
         fd.append('thumbnailUrl', formData.thumbnailUrl);
         fd.append('orderIndex', formData.orderIndex.toString());
         fd.append('stripeProductId', formData.stripeProductId);
@@ -79,7 +89,11 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
             toast.success(masterclass ? 'Masterclass updated' : 'Masterclass created');
             onSuccess();
             if (!masterclass) {
-                setFormData({ title: '', subtitle: '', description: '', thumbnailUrl: '', orderIndex: 0, stripeProductId: '', priceId: '' });
+                setFormData({
+                    title: '', subtitle: '', description: '',
+                    titleEs: '', subtitleEs: '', descriptionEs: '',
+                    thumbnailUrl: '', orderIndex: 0, stripeProductId: '', priceId: ''
+                });
             }
         } else {
             toast.error(result.error);
@@ -129,28 +143,95 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
 
                 {/* Details */}
                 <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Title</label>
-                        <input
-                            type="text"
-                            required
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
-                            placeholder="e.g. Color Mastery"
-                        />
+                    {/* Language Tabs */}
+                    <div className="flex gap-4 border-b border-ac-taupe/10 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('en')}
+                            className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'en' ? 'text-ac-gold border-b-2 border-ac-gold' : 'text-ac-taupe/40 hover:text-ac-taupe'}`}
+                        >
+                            English
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('es')}
+                            className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'es' ? 'text-ac-gold border-b-2 border-ac-gold' : 'text-ac-taupe/40 hover:text-ac-taupe'}`}
+                        >
+                            Spanish
+                        </button>
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Subtitle</label>
-                        <input
-                            type="text"
-                            value={formData.subtitle}
-                            onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
-                            placeholder="e.g. The definitive guide to palette"
-                        />
-                    </div>
-                    <div>
+
+                    {activeTab === 'en' ? (
+                        <>
+                            <div>
+                                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Title (EN)</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                    placeholder="e.g. Color Mastery"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Subtitle (EN)</label>
+                                <input
+                                    type="text"
+                                    value={formData.subtitle}
+                                    onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                    placeholder="e.g. The definitive guide to palette"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Description (EN)</label>
+                                <textarea
+                                    rows={4}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold resize-none"
+                                    placeholder="What will students learn in this masterclass?"
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Título (ES)</label>
+                                <input
+                                    type="text"
+                                    value={formData.titleEs}
+                                    onChange={(e) => setFormData({ ...formData, titleEs: e.target.value })}
+                                    className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                    placeholder="e.g. Maestría del Color"
+                                />
+                            </div>
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Subtítulo (ES)</label>
+                                <input
+                                    type="text"
+                                    value={formData.subtitleEs}
+                                    onChange={(e) => setFormData({ ...formData, subtitleEs: e.target.value })}
+                                    className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                    placeholder="e.g. La guía definitiva..."
+                                />
+                            </div>
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Descripción (ES)</label>
+                                <textarea
+                                    rows={4}
+                                    value={formData.descriptionEs}
+                                    onChange={(e) => setFormData({ ...formData, descriptionEs: e.target.value })}
+                                    className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold resize-none"
+                                    placeholder="¿Qué aprenderán los estudiantes?"
+                                />
+                            </div>
+                        </>
+                    )}
+
+
+                    <div className="pt-4 border-t border-ac-taupe/10">
                         <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Order Index</label>
                         <input
                             type="number"
@@ -159,93 +240,82 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
                             className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 bg-ac-taupe/5 p-4 rounded-sm border border-ac-taupe/10">
-                            <h4 className="text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-3">Stripe Integration</h4>
-
-                            <div className="flex gap-4 items-end mb-4">
-                                <div className="flex-1">
-                                    <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
-                                        Generator Price (USD)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        placeholder="50"
-                                        className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-2 text-sm"
-                                        id="gen-price-input"
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        const priceInput = document.getElementById('gen-price-input') as HTMLInputElement;
-                                        const price = parseFloat(priceInput.value);
-                                        if (!formData.title) {
-                                            toast.error("Please enter a Title first");
-                                            return;
-                                        }
-                                        if (!price || price <= 0) {
-                                            toast.error("Please enter a valid price");
-                                            return;
-                                        }
-
-                                        const toastId = toast.loading("Generating Stripe Product...");
-                                        const { createStripeProduct } = await import('@/app/actions/admin/stripe-product');
-                                        const res = await createStripeProduct(formData.title, price, 'masterclass');
-
-                                        if (res.success && res.productId && res.priceId) {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                stripeProductId: res.productId!,
-                                                priceId: res.priceId!
-                                            }));
-                                            toast.success("Stripe Product Created!", { id: toastId });
-                                        } else {
-                                            toast.error(res.error || "Failed to generate", { id: toastId });
-                                        }
-                                    }}
-                                    className="px-4 py-2 bg-ac-gold text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-ac-gold/80 h-[38px]"
-                                >
-                                    Generate
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Product ID</label>
-                                    <input
-                                        type="text"
-                                        value={formData.stripeProductId}
-                                        onChange={(e) => setFormData({ ...formData, stripeProductId: e.target.value })}
-                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
-                                        placeholder="prod_..."
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Price ID</label>
-                                    <input
-                                        type="text"
-                                        value={formData.priceId}
-                                        onChange={(e) => setFormData({ ...formData, priceId: e.target.value })}
-                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
-                                        placeholder="price_..."
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <div>
-                <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Description</label>
-                <textarea
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold resize-none"
-                    placeholder="What will students learn in this masterclass?"
-                />
+            {/* Stripe moved to bottom or kept in grid? Kept separate for safety */}
+            <div className="bg-ac-taupe/5 p-6 rounded-sm border border-ac-taupe/10">
+                <h4 className="text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-3">Stripe Integration</h4>
+
+                <div className="flex gap-4 items-end mb-4">
+                    <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-ac-taupe/60 uppercase tracking-widest mb-1">
+                            Generator Price (USD)
+                        </label>
+                        <input
+                            type="number"
+                            placeholder="50"
+                            className="w-full bg-white/60 border border-ac-taupe/10 rounded-sm p-2 text-sm"
+                            id="gen-price-input"
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            const priceInput = document.getElementById('gen-price-input') as HTMLInputElement;
+                            const price = parseFloat(priceInput.value);
+                            if (!formData.title) {
+                                toast.error("Please enter a Title first");
+                                return;
+                            }
+                            if (!price || price <= 0) {
+                                toast.error("Please enter a valid price");
+                                return;
+                            }
+
+                            const toastId = toast.loading("Generating Stripe Product...");
+                            const { createStripeProduct } = await import('@/app/actions/admin/stripe-product');
+                            const res = await createStripeProduct(formData.title, price, 'masterclass');
+
+                            if (res.success && res.productId && res.priceId) {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    stripeProductId: res.productId!,
+                                    priceId: res.priceId!
+                                }));
+                                toast.success("Stripe Product Created!", { id: toastId });
+                            } else {
+                                toast.error(res.error || "Failed to generate", { id: toastId });
+                            }
+                        }}
+                        className="px-4 py-2 bg-ac-gold text-white text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-ac-gold/80 h-[38px]"
+                    >
+                        Generate
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Product ID</label>
+                        <input
+                            type="text"
+                            value={formData.stripeProductId}
+                            onChange={(e) => setFormData({ ...formData, stripeProductId: e.target.value })}
+                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
+                            placeholder="prod_..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">Stripe Price ID</label>
+                        <input
+                            type="text"
+                            value={formData.priceId}
+                            onChange={(e) => setFormData({ ...formData, priceId: e.target.value })}
+                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
+                            placeholder="price_..."
+                        />
+                    </div>
+                </div>
             </div>
 
             <div className="flex gap-4 justify-end border-t border-ac-taupe/10 pt-6">

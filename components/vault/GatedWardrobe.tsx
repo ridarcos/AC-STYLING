@@ -1,16 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Lock, Plus, Camera, Loader2, Check } from 'lucide-react';
+import { Lock, Plus, Camera, Loader2, Check, Trash2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import NextImage from 'next/image';
 
 interface GatedWardrobeProps {
     isActiveClient: boolean;
     userId: string;
-    initialItems?: any[];
+    initialItems?: Record<string, unknown>[];
 }
 
 export default function GatedWardrobe({ isActiveClient, userId, initialItems = [] }: GatedWardrobeProps) {
@@ -18,6 +19,7 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
     const [isUploading, setIsUploading] = useState(false);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [clientNote, setClientNote] = useState("");
+    const [category, setCategory] = useState("Uncategorized");
     const [isSaving, setIsSaving] = useState(false);
 
     const supabase = createClient();
@@ -70,7 +72,7 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
                 image_url: publicUrl,
                 client_note: clientNote,
                 status: 'Keep', // Default status
-                category: 'Uncategorized'
+                category: category || 'Uncategorized'
             }).select().single();
 
             if (dbError) throw dbError;
@@ -80,6 +82,7 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
             setIsUploading(false);
             setUploadFile(null);
             setClientNote("");
+            setCategory("Uncategorized");
         } catch (err: any) {
             toast.error(err.message || "Failed to upload.");
         } finally {
@@ -113,18 +116,52 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
                     <button onClick={() => setIsUploading(true)} className="text-ac-gold hover:underline text-xs">Upload your first piece</button>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto max-h-[800px] pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto max-h-[800px] pr-2 custom-scrollbar">
                     {items.map((item) => (
                         <div key={item.id} className="group relative aspect-[3/4] bg-white/40 rounded-sm overflow-hidden border border-white/50 hover:border-ac-gold/30 transition-all">
-                            <img src={item.image_url} alt="Wardrobe item" className="w-full h-full object-cover" />
+                            <div className="relative w-full h-full">
+                                <NextImage
+                                    src={item.image_url}
+                                    alt="Wardrobe item"
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 768px) 50vw, 33vw"
+                                />
+                            </div>
 
                             {/* Status Tag */}
-                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[8px] font-bold uppercase tracking-widest text-ac-taupe shadow-sm">
+                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[8px] font-bold uppercase tracking-widest text-ac-taupe shadow-sm z-10">
                                 {item.status}
                             </div>
 
                             {/* Hover Details */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end text-white">
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end text-white z-20">
+                                <button
+                                    onClick={async (e) => {
+                                        e.preventDefault();
+                                        if (!confirm("Are you sure you want to remove this item? This cannot be undone.")) return;
+
+                                        const toastId = toast.loading("Removing item...");
+                                        // Optimistic update
+                                        const originalItems = [...items];
+                                        setItems(items.filter(i => i.id !== item.id));
+
+                                        const { deleteWardrobeItem } = await import("@/app/actions/studio");
+                                        const res = await deleteWardrobeItem(item.id);
+
+                                        if (res.success) {
+                                            toast.success("Item removed", { id: toastId });
+                                        } else {
+                                            toast.error(res.error || "Failed to remove", { id: toastId });
+                                            setItems(originalItems); // Revert
+                                        }
+                                    }}
+                                    className="absolute top-2 right-2 p-2 bg-white/20 hover:bg-red-500/80 backdrop-blur-md rounded-full text-white transition-all transform hover:scale-110"
+                                    title="Remove Item"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+
                                 <p className="text-[10px] uppercase tracking-widest font-bold mb-1">{item.category || 'Uncategorized'}</p>
                                 {item.client_note && (
                                     <p className="text-[10px] italic opacity-80 line-clamp-2">"{item.client_note}"</p>
@@ -159,7 +196,13 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
                             <div className="p-6 space-y-6">
                                 <div className="aspect-square bg-ac-taupe/5 border-2 border-dashed border-ac-taupe/10 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group hover:border-ac-gold/30 transition-colors">
                                     {uploadFile ? (
-                                        <img src={URL.createObjectURL(uploadFile)} className="absolute inset-0 w-full h-full object-cover" alt="Preview" />
+                                        <NextImage
+                                            src={URL.createObjectURL(uploadFile)}
+                                            alt="Preview"
+                                            fill
+                                            className="object-cover"
+                                            unoptimized
+                                        />
                                     ) : (
                                         <div className="text-center">
                                             <Camera size={24} className="text-ac-taupe/20 mx-auto mb-2" />
@@ -169,29 +212,46 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
                                     <input type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
                                 </div>
 
-                                <div>
-                                    <label className="text-[9px] uppercase font-bold tracking-widest text-ac-taupe/40 block mb-2">Notes for Alejandra</label>
-                                    <textarea
-                                        value={clientNote}
-                                        onChange={(e) => setClientNote(e.target.value)}
-                                        placeholder="Any specific questions about this item?"
-                                        className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold h-20 resize-none"
-                                    />
-                                </div>
+                                <textarea
+                                    value={clientNote}
+                                    onChange={(e) => setClientNote(e.target.value)}
+                                    placeholder="Any specific questions about this item?"
+                                    className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold h-20 resize-none"
+                                />
 
-                                <button
-                                    onClick={handleUpload}
-                                    disabled={!uploadFile || isSaving}
-                                    className="w-full bg-ac-gold text-white py-4 rounded-sm font-bold uppercase tracking-widest text-xs disabled:opacity-50 hover:bg-ac-taupe transition-colors flex justify-center items-center gap-2"
-                                >
-                                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
-                                    Add to Wardrobe
-                                </button>
-                            </div>
+                                {/* Category Selection */}
+                                <div>
+                                    <label className="text-[9px] uppercase font-bold tracking-widest text-ac-taupe/40 block mb-2">Category (Optional)</label>
+                                    <select
+                                        value={category}
+                                        onChange={(e) => setCategory(e.target.value)}
+                                        className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold appearance-none"
+                                    >
+                                        <option value="Uncategorized">Select a Category...</option>
+                                        <option value="Tops">Tops</option>
+                                        <option value="Bottoms">Bottoms</option>
+                                        <option value="Dresses">Dresses</option>
+                                        <option value="Outerwear">Outerwear</option>
+                                        <option value="Shoes">Shoes</option>
+                                        <option value="Bags">Bags</option>
+                                        <option value="Accessories">Accessories</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div> {/* This div closes the p-6 space-y-6 block */}
+
+                            <button
+                                onClick={handleUpload}
+                                disabled={!uploadFile || isSaving}
+                                className="w-full bg-ac-gold text-white py-4 rounded-sm font-bold uppercase tracking-widest text-xs disabled:opacity-50 hover:bg-ac-taupe transition-colors flex justify-center items-center gap-2"
+                            >
+                                {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
+                                Add to Wardrobe
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }

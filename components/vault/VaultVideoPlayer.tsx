@@ -1,27 +1,68 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { useLocale } from "next-intl";
-import { Globe } from "lucide-react";
+import { Globe, Lock } from "lucide-react";
+import Player from '@vimeo/player';
 
 interface VaultVideoPlayerProps {
     videoId: string; // Vimeo ID (Default/EN)
     videoIdEs?: string; // Vimeo ID (Spanish)
     title?: string;
+    locale?: string;
 }
 
-export default function VaultVideoPlayer({ videoId, videoIdEs, title }: VaultVideoPlayerProps) {
-    const locale = useLocale();
-    const [isFocused, setIsFocused] = useState(false);
-    const [activeLang, setActiveLang] = useState<'en' | 'es'>(locale === 'es' ? 'es' : 'en');
+export default function VaultVideoPlayer({ videoId, videoIdEs, title, locale: initialLocale }: VaultVideoPlayerProps) {
+    const hookLocale = useLocale();
+    const currentLocale = initialLocale || hookLocale;
 
-    // Force sync if locale changes (e.g. user toggles site language)
+    // State
+
+    const [isPrivacyError, setIsPrivacyError] = useState(false);
+
+    // Refs
+    const containerRef = useRef<HTMLDivElement>(null);
+    const playerRef = useRef<Player | null>(null);
+
+    // Automatically select video based on locale. Fallback to EN if ES is not available.
+    const currentVideoId = (currentLocale === 'es' && videoIdEs) ? videoIdEs : videoId;
+
     useEffect(() => {
-        setActiveLang(locale === 'es' && videoIdEs ? 'es' : 'en');
-    }, [locale, videoIdEs]);
+        if (!containerRef.current || !currentVideoId) return;
 
-    const currentVideoId = activeLang === 'es' && videoIdEs ? videoIdEs : videoId;
+        // Reset error state and cleanup old player
+
+        if (playerRef.current) {
+            playerRef.current.destroy().catch(() => { });
+            playerRef.current = null;
+        }
+
+        // Initialize Player
+        const player = new Player(containerRef.current, {
+            id: Number(currentVideoId),
+            title: false,
+            byline: false,
+            portrait: false,
+            color: 'd4af37',
+            dnt: true,
+            responsive: true,
+        });
+
+        playerRef.current = player;
+
+        player.on('error', (data) => {
+            console.warn("Vimeo Player Error:", data);
+            if (data.name === 'PrivacyError' || (data as { message?: string }).message?.toLowerCase().includes('privacy')) {
+                setIsPrivacyError(true);
+            }
+        });
+
+        return () => {
+            player.destroy().catch(() => { });
+        };
+    }, [currentVideoId]);
+
 
     return (
         <div className="space-y-3">
@@ -29,45 +70,25 @@ export default function VaultVideoPlayer({ videoId, videoIdEs, title }: VaultVid
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={`relative w-full rounded-sm overflow-hidden border border-white/20 shadow-lg`}
-                onMouseEnter={() => setIsFocused(true)}
-                onMouseLeave={() => setIsFocused(false)}
             >
                 <div className="w-full aspect-video bg-ac-taupe/10 relative">
-                    <iframe
-                        src={`https://player.vimeo.com/video/${currentVideoId}?title=0&byline=0&portrait=0&color=d4af37`}
-                        className="absolute top-0 left-0 w-full h-full"
-                        allow="autoplay; fullscreen; picture-in-picture"
-                        allowFullScreen
-                        title={title || "Video Player"}
-                    />
+                    {isPrivacyError ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-8 text-center">
+                            <div className="w-12 h-12 bg-ac-gold/20 rounded-full flex items-center justify-center mb-4">
+                                <Lock size={20} className="text-ac-gold" />
+                            </div>
+                            <h3 className="font-serif text-xl text-white mb-2">Private Content</h3>
+                            <p className="text-white/60 text-xs max-w-sm">
+                                This video is domain-protected. If you are seeing this on a development environment, this is expected behavior.
+                            </p>
+                        </div>
+                    ) : (
+                        <div ref={containerRef} className="w-full h-full" />
+                    )}
                 </div>
             </motion.div>
 
-            {/* Language Switcher Overlay / Bottom Bar */}
-            {videoIdEs && (
-                <div className="flex justify-end pt-2">
-                    <div className="inline-flex items-center gap-1 bg-white/40 backdrop-blur-md border border-white/30 rounded-full px-4 py-1.5 shadow-sm">
-                        <Globe size={12} className="text-ac-taupe/40" />
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-ac-taupe/40 mr-2">Language</span>
-                        <div className="flex gap-1.5">
-                            <button
-                                onClick={() => setActiveLang('en')}
-                                className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all
-                                    ${activeLang === 'en' ? 'bg-ac-taupe text-white shadow-sm' : 'text-ac-taupe hover:bg-white/40'}`}
-                            >
-                                EN
-                            </button>
-                            <button
-                                onClick={() => setActiveLang('es')}
-                                className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all
-                                    ${activeLang === 'es' ? 'bg-ac-taupe text-white shadow-sm' : 'text-ac-taupe hover:bg-white/40'}`}
-                            >
-                                ES
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 }

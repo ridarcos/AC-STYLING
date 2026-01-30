@@ -49,8 +49,20 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         if (next) nextChapterSlug = next.slug;
     }
 
-    const labQuestions = chapter.lab_questions || [];
-    const takeaways = chapter.takeaways || [];
+    // Localize Content
+    const title = locale === 'es' && chapter.title_es ? chapter.title_es : chapter.title;
+    const subtitle = locale === 'es' && chapter.subtitle_es ? chapter.subtitle_es : chapter.subtitle;
+    const description = locale === 'es' && chapter.description_es ? chapter.description_es : chapter.description;
+    const labQuestionsRaw = chapter.lab_questions || [];
+    // Shared Key Strategy: We map over the SINGLE array of questions, but swap the label/placeholder if locale is ES.
+    const labQuestions = labQuestionsRaw.map((q: any) => ({
+        ...q,
+        label: (locale === 'es' && q.label_es) ? q.label_es : q.label,
+        placeholder: (locale === 'es' && q.placeholder_es) ? q.placeholder_es : q.placeholder
+    }));
+    const takeaways = (locale === 'es' && chapter.takeaways_es && chapter.takeaways_es.length > 0)
+        ? chapter.takeaways_es
+        : (chapter.takeaways || []);
     const resourceUrls = chapter.resource_urls || [];
 
     // Fetch User Data
@@ -97,10 +109,10 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
                     <span className="font-serif text-5xl text-ac-taupe/20 font-bold">#</span>
                     <div>
                         <h1 className="font-serif text-3xl md:text-5xl text-ac-taupe">
-                            {chapter.title}
+                            {title}
                         </h1>
-                        {chapter.subtitle && (
-                            <p className="text-lg text-ac-gold/80 mt-2">{chapter.subtitle}</p>
+                        {subtitle && (
+                            <p className="text-lg text-ac-gold/80 mt-2">{subtitle}</p>
                         )}
                     </div>
                 </div>
@@ -114,7 +126,13 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
                     {/* Video Player OR Locked State */}
                     <div className="space-y-6">
                         {hasAccess ? (
-                            <VaultVideoPlayer videoId={chapter.video_id} videoIdEs={chapter.video_id_es} title={chapter.title} />
+                            <VaultVideoPlayer
+                                key={locale}
+                                videoId={chapter.video_id}
+                                videoIdEs={chapter.video_id_es}
+                                title={title}
+                                locale={locale}
+                            />
                         ) : (
                             <div className="aspect-video bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm flex flex-col items-center justify-center p-8 text-center">
                                 <div className="w-16 h-16 bg-ac-taupe/10 rounded-full flex items-center justify-center mb-4">
@@ -143,7 +161,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
                                 <div className="prose prose-stone max-w-none flex-1">
                                     <h3 className="font-serif text-2xl text-ac-taupe mb-2">About this Chapter</h3>
                                     <div className="text-ac-taupe/80 leading-relaxed whitespace-pre-line">
-                                        {chapter.description || 'Learn the foundations of this essential style concept.'}
+                                        {description || 'Learn the foundations of this essential style concept.'}
                                     </div>
                                 </div>
 

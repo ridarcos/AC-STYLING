@@ -2,6 +2,8 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { stripe } from '@/utils/stripe';
+import { grantAccessForProduct } from '@/app/lib/access-logic';
 
 /**
  * Checks if a user has purchased a specific product.
@@ -70,6 +72,61 @@ export async function purchaseProduct(productId: string) {
         return { success: true };
     } catch (err: any) {
         console.error("Purchase Error:", err);
+        return { error: err.message };
+    }
+}
+
+/**
+ * Syncs Stripe purchases for the current user.
+ * Useful if webhooks fail (e.g. local dev).
+ */
+export async function syncStripePurchases() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user || !user.email) return { error: "User or Email not found" };
+
+    try {
+        // 1. Fetch recent sessions (Last 100) and filter manually
+        // ('search' API is not available in current SDK version)
+        const sessions = await stripe.checkout.sessions.list({
+            limit: 100,
+            expand: ['data.line_items'],
+        });
+
+        const targetEmail = user.email.toLowerCase();
+
+        let restoredCount = 0;
+
+        for (const session of sessions.data) {
+            // Check Payer Email (Guest or Customer)
+            const payerEmail = session.customer_details?.email || session.customer_email;
+
+            if (session.payment_status === 'paid' && payerEmail?.toLowerCase() === targetEmail) {
+                const lineItems = session.line_items?.data || [];
+
+                for (const item of lineItems) {
+                    const stripeProductId = typeof item.price?.product === 'string'
+                        ? item.price?.product
+                        : (item.price?.product as any)?.id;
+
+                    if (stripeProductId) {
+                        const granted = await grantAccessForProduct(supabase, user.id, stripeProductId);
+                        if (granted) restoredCount++;
+                    }
+                }
+            }
+        }
+
+        if (restoredCount > 0) {
+            revalidatePath('/vault');
+            return { success: true, message: `Restored ${restoredCount} purchases.` };
+        } else {
+            return { success: true, message: "No new purchases found to restore." };
+        }
+
+    } catch (err: any) {
+        console.error("Sync Error:", err);
         return { error: err.message };
     }
 }

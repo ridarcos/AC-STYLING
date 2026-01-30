@@ -2,6 +2,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { routing } from '@/i18n/routing';
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -57,7 +59,14 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone()
         // ... (existing redirect logic)
         const pathSegments = request.nextUrl.pathname.split('/');
-        const locale = pathSegments[1] || 'en';
+
+        // pathSegments[0] is empty string (split on leading slash)
+        // pathSegments[1] is the first segment (e.g., 'en', 'es', or 'vault')
+        const firstSegment = pathSegments[1];
+
+        // Check if the first segment is a supported locale
+        const locale = routing.locales.includes(firstSegment as any) ? firstSegment : 'en';
+
         url.pathname = `/${locale}/login`
         return NextResponse.redirect(url)
     }

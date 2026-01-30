@@ -15,6 +15,9 @@ interface Chapter {
     title: string;
     subtitle: string;
     description: string;
+    title_es?: string;
+    subtitle_es?: string;
+    description_es?: string;
     video_id: string;
     video_id_es: string;
     thumbnail_url: string;
@@ -24,6 +27,7 @@ interface Chapter {
     is_standalone: boolean;
     lab_questions: LabQuestion[];
     takeaways: string[];
+    takeaways_es?: string[];
     resource_urls: ResourceUrl[];
     stripe_product_id?: string;
     price_id?: string;
@@ -33,6 +37,8 @@ interface LabQuestion {
     key: string;
     label: string;
     placeholder: string;
+    label_es?: string;
+    placeholder_es?: string;
     mapToEssence?: boolean;
     mappingCategory?: string;
 }
@@ -50,11 +56,15 @@ interface ChapterFormProps {
 
 export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFormProps) {
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'en' | 'es'>('en');
     const [formData, setFormData] = useState({
         slug: chapter?.slug || '',
         title: chapter?.title || '',
         subtitle: chapter?.subtitle || '',
         description: chapter?.description || '',
+        titleEs: chapter?.title_es || '',
+        subtitleEs: chapter?.subtitle_es || '',
+        descriptionEs: chapter?.description_es || '',
         videoId: chapter?.video_id || '',
         videoIdEs: chapter?.video_id_es || '',
         thumbnailUrl: chapter?.thumbnail_url || '',
@@ -80,6 +90,9 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
     const [takeaways, setTakeaways] = useState<string[]>(
         chapter?.takeaways || []
     );
+    const [takeawaysEs, setTakeawaysEs] = useState<string[]>(
+        chapter?.takeaways_es || []
+    );
     const [resourceUrls, setResourceUrls] = useState<Array<{ name: string, url: string }>>(
         chapter?.resource_urls || []
     );
@@ -94,6 +107,9 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             title: chapter?.title || '',
             subtitle: chapter?.subtitle || '',
             description: chapter?.description || '',
+            titleEs: chapter?.title_es || '',
+            subtitleEs: chapter?.subtitle_es || '',
+            descriptionEs: chapter?.description_es || '',
             videoId: chapter?.video_id || '',
             videoIdEs: chapter?.video_id_es || '',
             thumbnailUrl: chapter?.thumbnail_url || '',
@@ -106,6 +122,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         });
         setLabQuestions(chapter?.lab_questions || []);
         setTakeaways(chapter?.takeaways || []);
+        setTakeawaysEs(chapter?.takeaways_es || []);
         setResourceUrls(chapter?.resource_urls || []);
     }, [chapter]);
 
@@ -166,6 +183,9 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         fd.append('title', formData.title);
         fd.append('subtitle', formData.subtitle);
         fd.append('description', formData.description);
+        fd.append('titleEs', formData.titleEs);
+        fd.append('subtitleEs', formData.subtitleEs);
+        fd.append('descriptionEs', formData.descriptionEs);
         fd.append('videoId', formData.videoId);
         fd.append('videoIdEs', formData.videoIdEs);
         fd.append('thumbnailUrl', formData.thumbnailUrl);
@@ -177,6 +197,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
         fd.append('priceId', formData.priceId);
         fd.append('labQuestions', JSON.stringify(labQuestions));
         fd.append('takeaways', JSON.stringify(takeaways));
+        fd.append('takeawaysEs', JSON.stringify(takeawaysEs));
         fd.append('resourceUrls', JSON.stringify(resourceUrls));
 
         const result = chapter
@@ -188,9 +209,15 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             onSuccess();
             // Reset form if creating new
             if (!chapter) {
-                setFormData({ slug: '', title: '', subtitle: '', description: '', videoId: '', videoIdEs: '', thumbnailUrl: '', category: 'masterclass', orderIndex: 0, masterclassId: '', isStandalone: true, stripeProductId: '', priceId: '' });
+                setFormData({
+                    slug: '', title: '', subtitle: '', description: '',
+                    titleEs: '', subtitleEs: '', descriptionEs: '',
+                    videoId: '', videoIdEs: '', thumbnailUrl: '', category: 'masterclass',
+                    orderIndex: 0, masterclassId: '', isStandalone: true, stripeProductId: '', priceId: ''
+                });
                 setLabQuestions([]);
                 setTakeaways([]);
+                setTakeawaysEs([]);
                 setResourceUrls([]);
             }
         } else {
@@ -379,7 +406,7 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                                     Mark as Standalone
                                 </label>
                                 <p className="text-xs text-ac-taupe/60">
-                                    Standalone lessons appear in the "Single Lessons" feed.
+                                    Standalone lessons appear in the &quot;Single Lessons&quot; feed.
                                 </p>
                             </div>
                         </div>
@@ -391,55 +418,118 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
             <div className="space-y-6">
                 <h3 className="font-serif text-2xl text-ac-taupe border-b border-ac-taupe/10 pb-3">Lesson Content</h3>
 
+                {/* Language Tabs */}
+                <div className="flex gap-4 border-b border-ac-taupe/10 mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('en')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'en' ? 'text-ac-gold border-b-2 border-ac-gold' : 'text-ac-taupe/40 hover:text-ac-taupe'}`}
+                    >
+                        English
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('es')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-widest transition-colors ${activeTab === 'es' ? 'text-ac-gold border-b-2 border-ac-gold' : 'text-ac-taupe/40 hover:text-ac-taupe'}`}
+                    >
+                        Spanish
+                    </button>
+                </div>
+
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Video & Description */}
                     <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
-                                Vimeo ID (English)
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.videoId}
-                                onChange={(e) => setFormData({ ...formData, videoId: e.target.value })}
-                                placeholder="76979871"
-                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
-                            />
-                        </div>
+                        {activeTab === 'en' ? (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                                        Vimeo ID (English)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.videoId}
+                                        onChange={(e) => setFormData({ ...formData, videoId: e.target.value })}
+                                        placeholder="76979871"
+                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                                        Full Lesson Content (EN)
+                                    </label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        rows={6}
+                                        placeholder="Detailed description..."
+                                        className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold resize-none"
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                                        Vimeo ID (Spanish)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.videoIdEs}
+                                        onChange={(e) => setFormData({ ...formData, videoIdEs: e.target.value })}
+                                        placeholder="76979871"
+                                        className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                    />
+                                </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
-                                Vimeo ID (Spanish)
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.videoIdEs}
-                                onChange={(e) => setFormData({ ...formData, videoIdEs: e.target.value })}
-                                placeholder="76979871"
-                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
-                            />
-                        </div>
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                                        Título (ES)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.titleEs}
+                                        onChange={(e) => setFormData({ ...formData, titleEs: e.target.value })}
+                                        className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                        placeholder="e.g. Título del Capítulo"
+                                    />
+                                </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
-                                Full Lesson Content
-                            </label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                rows={6}
-                                placeholder="Detailed description that appears under the video..."
-                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold resize-none"
-                            />
-                        </div>
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                                        Subtítulo (ES)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.subtitleEs}
+                                        onChange={(e) => setFormData({ ...formData, subtitleEs: e.target.value })}
+                                        className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold"
+                                        placeholder="e.g. Subtítulo..."
+                                    />
+                                </div>
+
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest mb-2">
+                                        Contenido (ES)
+                                    </label>
+                                    <textarea
+                                        value={formData.descriptionEs}
+                                        onChange={(e) => setFormData({ ...formData, descriptionEs: e.target.value })}
+                                        rows={6}
+                                        placeholder="Descripción detallada en español..."
+                                        className="w-full bg-white/40 border border-ac-gold/30 rounded-sm p-3 text-ac-taupe focus:outline-none focus:border-ac-gold focus:ring-1 focus:ring-ac-gold resize-none"
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Essence Lab Questions */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest">
-                                Essence Lab Questions
+                                {activeTab === 'en' ? 'Essence Lab Questions (Shared Keys)' : 'Preguntas Essence Lab (Traducción)'}
                             </label>
                             <button
                                 type="button"
@@ -466,42 +556,60 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <div className="md:col-span-2">
-                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">Question Key (Unique ID)</label>
+                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">
+                                                Question Key (Unique ID)
+                                            </label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. style_words_1"
+                                                placeholder="e.g. style_words_1 (Shared)"
                                                 value={q.key}
                                                 onChange={(e) => {
                                                     const newVal = e.target.value;
                                                     setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, key: newVal } : item));
                                                 }}
-                                                className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold font-mono"
+                                                disabled={activeTab === 'es'}
+                                                className={`w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold font-mono ${activeTab === 'es' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             />
+                                            {activeTab === 'es' && <p className="text-[9px] text-ac-gold mt-1">Key is shared. Edit in English tab.</p>}
                                         </div>
 
                                         <div>
-                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">User Label</label>
+                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">
+                                                {activeTab === 'en' ? 'User Label (EN)' : 'Etiqueta (ES)'}
+                                            </label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. What is your first word?"
-                                                value={q.label}
+                                                placeholder={activeTab === 'en' ? "e.g. What is your first word?" : "e.g. ¿Cual es tu primera palabra?"}
+                                                value={activeTab === 'en' ? q.label : (q.label_es || '')}
                                                 onChange={(e) => {
                                                     const newVal = e.target.value;
-                                                    setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, label: newVal } : item));
+                                                    setLabQuestions(prev => prev.map((item, idx) => {
+                                                        if (idx !== i) return item;
+                                                        return activeTab === 'en'
+                                                            ? { ...item, label: newVal }
+                                                            : { ...item, label_es: newVal };
+                                                    }));
                                                 }}
                                                 className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">Placeholder</label>
+                                            <label className="text-[10px] text-ac-taupe/40 uppercase font-bold">
+                                                {activeTab === 'en' ? 'Placeholder (EN)' : 'Placeholder (ES)'}
+                                            </label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. Elegant..."
-                                                value={q.placeholder}
+                                                placeholder={activeTab === 'en' ? "e.g. Elegant..." : "e.g. Elegante..."}
+                                                value={activeTab === 'en' ? q.placeholder : (q.placeholder_es || '')}
                                                 onChange={(e) => {
                                                     const newVal = e.target.value;
-                                                    setLabQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, placeholder: newVal } : item));
+                                                    setLabQuestions(prev => prev.map((item, idx) => {
+                                                        if (idx !== i) return item;
+                                                        return activeTab === 'en'
+                                                            ? { ...item, placeholder: newVal }
+                                                            : { ...item, placeholder_es: newVal };
+                                                    }));
                                                 }}
                                                 className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
                                             />
@@ -559,11 +667,11 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest">
-                                    Key Takeaways
+                                    {activeTab === 'en' ? 'Key Takeaways (EN)' : 'Puntos Clave (ES)'}
                                 </label>
                                 <button
                                     type="button"
-                                    onClick={() => setTakeaways([...takeaways, ''])}
+                                    onClick={() => activeTab === 'en' ? setTakeaways([...takeaways, '']) : setTakeawaysEs([...takeawaysEs, ''])}
                                     className="text-ac-gold hover:text-ac-olive"
                                 >
                                     <Plus size={18} />
@@ -571,27 +679,51 @@ export default function ChapterForm({ chapter, onSuccess, onCancel }: ChapterFor
                             </div>
 
                             <div className="space-y-2">
-                                {takeaways.map((t, i) => (
-                                    <div key={i} className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Key takeaway..."
-                                            value={t}
-                                            onChange={(e) => {
-                                                const newVal = e.target.value;
-                                                setTakeaways(prev => prev.map((item, idx) => idx === i ? newVal : item));
-                                            }}
-                                            className="flex-1 bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setTakeaways(prev => prev.filter((_, idx) => idx !== i))}
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))}
+                                {activeTab === 'en' ? (
+                                    takeaways.map((t, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Key takeaway..."
+                                                value={t}
+                                                onChange={(e) => {
+                                                    const newVal = e.target.value;
+                                                    setTakeaways(prev => prev.map((item, idx) => idx === i ? newVal : item));
+                                                }}
+                                                className="flex-1 bg-white/40 border border-ac-taupe/10 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setTakeaways(prev => prev.filter((_, idx) => idx !== i))}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    takeawaysEs.map((t, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Punto clave..."
+                                                value={t}
+                                                onChange={(e) => {
+                                                    const newVal = e.target.value;
+                                                    setTakeawaysEs(prev => prev.map((item, idx) => idx === i ? newVal : item));
+                                                }}
+                                                className="flex-1 bg-white/40 border border-ac-gold/30 rounded-sm p-2 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setTakeawaysEs(prev => prev.filter((_, idx) => idx !== i))}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
 

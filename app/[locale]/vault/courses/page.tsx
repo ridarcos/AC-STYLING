@@ -74,14 +74,17 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {chapters.map((chapter) => {
                         const isCompleted = completedChapters.has(chapter.slug);
+                        const displayTitle = locale === 'es' && chapter.title_es ? chapter.title_es : chapter.title;
+                        const displayThumb = chapter.thumbnail_url;
+
                         return (
                             <Link href={`/vault/courses/${chapter.slug}`} key={chapter.id} className="group block">
                                 <div className="relative aspect-[4/3] overflow-hidden rounded-sm mb-3 bg-ac-sand/20">
                                     <div className="absolute inset-0 bg-ac-taupe/10 group-hover:bg-transparent transition-colors z-10" />
-                                    {chapter.thumbnail_url ? (
+                                    {displayThumb ? (
                                         <img
-                                            src={chapter.thumbnail_url}
-                                            alt={chapter.title}
+                                            src={displayThumb}
+                                            alt={displayTitle}
                                             className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
                                         />
                                     ) : (
@@ -106,7 +109,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                                     </div>
                                 </div>
                                 <h3 className="font-serif text-xl text-ac-taupe group-hover:text-ac-olive transition-colors">
-                                    {chapter.title}
+                                    {displayTitle}
                                 </h3>
                                 <p className="text-[10px] text-ac-taupe/40 uppercase tracking-widest mt-1">{t('lesson_label')}</p>
                             </Link>

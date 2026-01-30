@@ -5,6 +5,8 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { checkAccess } from "@/utils/access-control";
 import UnlockButton from "@/components/monetization/UnlockButton";
+import RestorePurchasesButton from "@/components/monetization/RestorePurchasesButton";
+import CheckoutSyncHandler from "@/components/monetization/CheckoutSyncHandler";
 
 export const dynamic = 'force-dynamic';
 
@@ -65,8 +67,13 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
     const completedCount = chapters?.filter(c => completedChapters.has(c.slug)).length || 0;
     const progressPercent = totalChapters > 0 ? (completedCount / totalChapters) * 100 : 0;
 
+    // Localize Masterclass Info
+    const mcTitle = locale === 'es' && masterclass.title_es ? masterclass.title_es : masterclass.title;
+    const mcDescription = locale === 'es' && masterclass.description_es ? masterclass.description_es : masterclass.description;
+
     return (
         <section className="min-h-screen">
+            <CheckoutSyncHandler />
             {/* Nav */}
             <div className="mb-8 border-b border-ac-taupe/10 pb-6">
                 <Link href="/vault/foundations" className="flex items-center gap-2 text-sm uppercase tracking-widest text-ac-taupe/60 hover:text-ac-olive transition-colors mb-6 group">
@@ -79,7 +86,7 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                     <div className="w-full md:w-1/3 aspect-video rounded-sm overflow-hidden shadow-lg relative group">
                         <img
                             src={masterclass.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
-                            alt={masterclass.title}
+                            alt={mcTitle}
                             className={`w-full h-full object-cover transition-all duration-700 ${!hasAccess ? 'group-hover:scale-105 filter brightness-75' : ''}`}
                         />
                         {!hasAccess && (
@@ -95,10 +102,10 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                             Masterclass Collection
                         </span>
                         <h1 className="font-serif text-4xl md:text-5xl text-ac-taupe mb-4">
-                            {masterclass.title}
+                            {mcTitle}
                         </h1>
                         <p className="text-ac-taupe/80 text-lg leading-relaxed max-w-2xl mb-6">
-                            {masterclass.description}
+                            {mcDescription}
                         </p>
 
                         {/* CTA / Progress Bar */}
@@ -125,11 +132,16 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                                     </Link>
                                 </>
                             ) : (
-                                <UnlockButton
-                                    priceId={masterclass.price_id}
-                                    isLoggedIn={!!isAuthenticated}
-                                    returnUrl={`/vault/foundations/masterclass/${id}`}
-                                />
+                                <>
+                                    <UnlockButton
+                                        priceId={masterclass.price_id}
+                                        isLoggedIn={!!isAuthenticated}
+                                        returnUrl={`/vault/foundations/masterclass/${id}`}
+                                    />
+                                    <div className="flex justify-center pt-2">
+                                        <RestorePurchasesButton />
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
@@ -140,15 +152,18 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
                 {chapters && chapters.map((chapter, index) => {
                     const isCompleted = completedChapters.has(chapter.slug);
+                    const chTitle = locale === 'es' && chapter.title_es ? chapter.title_es : chapter.title;
+                    const chSubtitle = locale === 'es' && chapter.subtitle_es ? chapter.subtitle_es : chapter.subtitle;
+                    const chThumb = chapter.thumbnail_url;
 
                     const CardContent = (
                         <>
                             <div className="relative aspect-video overflow-hidden rounded-sm mb-3 bg-ac-sand/20">
                                 <div className="absolute inset-0 bg-ac-taupe/10 group-hover:bg-transparent transition-colors z-10" />
-                                {chapter.thumbnail_url ? (
+                                {chThumb ? (
                                     <img
-                                        src={chapter.thumbnail_url}
-                                        alt={chapter.title}
+                                        src={chThumb}
+                                        alt={chTitle}
                                         className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${hasAccess ? 'grayscale group-hover:grayscale-0' : 'grayscale filter contrast-75'}`}
                                     />
                                 ) : (
@@ -185,10 +200,10 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                             </div>
 
                             <h3 className="font-serif text-xl text-ac-taupe group-hover:text-ac-olive transition-colors flex items-center gap-2">
-                                {chapter.title}
+                                {chTitle}
                             </h3>
                             <p className="text-sm text-ac-taupe/60 line-clamp-1 mt-1">
-                                {chapter.subtitle}
+                                {chSubtitle}
                             </p>
                         </>
                     );

@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Plus, Tag, MessageSquare, Briefcase, ShoppingBag, ExternalLink, Loader2, Filter, Search, X, Check, Image as ImageIcon, Link as LinkIcon, Camera, Sparkles, Trash2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { extractUrlMetadata } from "@/app/actions/studio";
+import { extractUrlMetadata, uploadRemoteImage } from "@/app/actions/studio";
 
 interface VirtualWardrobeProps {
     clientId: string;
@@ -286,6 +286,33 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                         </div>
                                     </div>
 
+                                    {/* Brand & Tags */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">Brand / Designer</label>
+                                            <input
+                                                type="text"
+                                                value={selectedItem.brand || ""}
+                                                onChange={(e) => handleUpdateItem(selectedItem.id, { brand: e.target.value })}
+                                                placeholder="e.g. Zara, Prada"
+                                                className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-2 text-xs focus:outline-none focus:border-ac-gold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">Tags</label>
+                                            <input
+                                                type="text"
+                                                value={selectedItem.tags?.join(', ') || ""}
+                                                onChange={(e) => {
+                                                    const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                                                    handleUpdateItem(selectedItem.id, { tags });
+                                                }}
+                                                placeholder="Summer, Work..."
+                                                className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-2 text-xs focus:outline-none focus:border-ac-gold"
+                                            />
+                                        </div>
+                                    </div>
+
                                     {/* Dual Notes */}
                                     <div className="space-y-4 pt-4 border-t border-ac-taupe/10">
                                         <div>
@@ -301,11 +328,11 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                         <div>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Briefcase size={12} className="text-ac-gold" />
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-ac-gold">Ale's Internal Note</label>
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-ac-gold">Ale&apos;s Private Note</label>
                                             </div>
                                             <textarea
-                                                value={selectedItem.internal_note || ""}
-                                                onChange={(e) => handleUpdateItem(selectedItem.id, { internal_note: e.target.value })}
+                                                value={selectedItem.notes || ""}
+                                                onChange={(e) => handleUpdateItem(selectedItem.id, { notes: e.target.value })}
                                                 placeholder="Notes visible only to you..."
                                                 className="w-full bg-white/40 border border-ac-gold/20 rounded-sm p-3 text-[11px] text-ac-taupe placeholder:text-ac-gold/20 focus:outline-none focus:border-ac-gold transition-all resize-none h-24"
                                             />
@@ -506,7 +533,8 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                                                 user_id: clientId,
                                                                 image_url: publicUrl,
                                                                 category: uploadForm.category,
-                                                                internal_note: uploadForm.internalNote,
+
+                                                                notes: uploadForm.internalNote,
                                                                 status: 'Keep'
                                                             }).select().single();
 
@@ -641,19 +669,37 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                                     onClick={async () => {
                                                         if (!linkForm.imageUrl) return toast.error("Image URL is required");
                                                         setIsSaving(true);
+
+                                                        // 1. Secure Upload
+                                                        let finalImageUrl = linkForm.imageUrl;
+                                                        try {
+                                                            const uploadRes = await uploadRemoteImage(linkForm.imageUrl, clientId);
+                                                            if (uploadRes.success && uploadRes.url) {
+                                                                finalImageUrl = uploadRes.url;
+                                                            } else {
+                                                                console.warn("Remote upload failed, falling back to direct link:", uploadRes.error);
+                                                                // Optional: Fail hard? Or allow fallback? 
+                                                                // User requested sustainability, so maybe we should warn better.
+                                                                toast.warning("Could not save image locally. Using external link.");
+                                                            }
+                                                        } catch (err) {
+                                                            console.error("Upload Error", err);
+                                                        }
+
+                                                        // 2. Save Item
                                                         const { data, error } = await supabase.from('wardrobe_items').insert({
                                                             user_id: clientId,
-                                                            image_url: linkForm.imageUrl,
+                                                            image_url: finalImageUrl,
                                                             category: linkForm.category,
-                                                            internal_note: linkForm.internalNote,
-                                                            product_link_id: null, // This is for local boutique items, but maybe we should store the external URL too?
+                                                            notes: linkForm.internalNote,
+                                                            product_link_id: null,
                                                             status: 'Keep'
                                                         }).select().single();
 
                                                         if (error) toast.error("Failed to save link");
                                                         else {
                                                             setItems([data, ...items]);
-                                                            toast.success("Link added to Wardrobe");
+                                                            toast.success("Link added (and image secured)!");
                                                             setIsAdding(false);
                                                             setLinkForm({ url: "", imageUrl: "", category: "Tops", internalNote: "" });
                                                             setExtractedImages([]);

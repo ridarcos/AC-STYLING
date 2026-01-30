@@ -14,13 +14,16 @@ interface FileEntry {
     id?: string;
 }
 
+import { uploadGuestWardrobeItem } from "@/app/actions/studio";
+
 interface IntakeUploaderProps {
     token: string;
-    isGuest: boolean; // Keeping for interface compat but unused
+    isGuest: boolean;
     locale: string;
+    onUploadSuccess?: () => void;
 }
 
-export default function IntakeUploader({ token, isGuest, locale }: IntakeUploaderProps) {
+export default function IntakeUploader({ token, isGuest, locale, onUploadSuccess }: IntakeUploaderProps) {
     const [files, setFiles] = useState<FileEntry[]>([]);
     const [isComplete, setIsComplete] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -62,70 +65,95 @@ export default function IntakeUploader({ token, isGuest, locale }: IntakeUploade
         setIsProcessing(true);
 
         try {
-            // Confirm Auth
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-            if (userError || !user) {
-                console.error("Auth Error:", userError);
-                throw new Error("Authentication failed: User not found");
-            }
+            // Check if Guest or Auth
+            if (isGuest) {
+                console.log("Starting Guest Upload with Token:", token);
 
-            console.log("Starting Upload for User:", user.id);
+                for (let i = 0; i < files.length; i++) {
+                    const entry = files[i];
+                    if (entry.status === 'success') continue;
 
-            // 2. Upload each file
-            for (let i = 0; i < files.length; i++) {
-                const entry = files[i];
-                if (entry.status === 'success') continue;
-
-                setFiles(prev => {
-                    const next = [...prev];
-                    next[i].status = 'uploading';
-                    return next;
-                });
-
-                const fileExt = entry.file.name.split('.').pop();
-                const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
-                const filePath = `wardrobe/${fileName}`;
-
-                // Upload to Storage
-                const { error: uploadError } = await supabase.storage
-                    .from('studio-wardrobe')
-                    .upload(filePath, entry.file);
-
-                if (uploadError) throw uploadError;
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('studio-wardrobe')
-                    .getPublicUrl(filePath);
-
-                // Save to Database
-                const { error: dbError } = await supabase
-                    .from('wardrobe_items')
-                    .insert({
-                        user_id: user.id,
-                        image_url: publicUrl,
-                        client_note: entry.note,
-                        status: 'Keep'
+                    setFiles(prev => {
+                        const next = [...prev];
+                        next[i].status = 'uploading';
+                        return next;
                     });
 
-                if (dbError) throw dbError;
+                    // Use Server Action
+                    const formData = new FormData();
+                    formData.append('file', entry.file);
+                    formData.append('note', entry.note);
 
-                setFiles(prev => {
-                    const next = [...prev];
-                    next[i].status = 'success';
-                    return next;
-                });
+                    const result = await uploadGuestWardrobeItem(formData, token);
+
+                    if (!result.success) {
+                        throw new Error(result.error);
+                    }
+
+                    setFiles(prev => {
+                        const next = [...prev];
+                        next[i].status = 'success';
+                        return next;
+                    });
+                }
+
+                toast.success("Photos uploaded successfully.");
+                // Trigger callback to move to Signup/Login
+                if (onUploadSuccess) onUploadSuccess();
+
+            } else {
+                // AUTHENTICATED UPLOAD
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError || !user) throw new Error("Authentication failed");
+
+                for (let i = 0; i < files.length; i++) {
+                    const entry = files[i];
+                    if (entry.status === 'success') continue;
+
+                    setFiles(prev => {
+                        const next = [...prev];
+                        next[i].status = 'uploading';
+                        return next;
+                    });
+
+                    const fileExt = entry.file.name.split('.').pop();
+                    const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+                    const filePath = `wardrobe/${fileName}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('studio-wardrobe')
+                        .upload(filePath, entry.file);
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('studio-wardrobe')
+                        .getPublicUrl(filePath);
+
+                    const { error: dbError } = await supabase
+                        .from('wardrobe_items')
+                        .insert({
+                            user_id: user.id,
+                            image_url: publicUrl,
+                            client_note: entry.note,
+                            status: 'Keep'
+                        });
+
+                    if (dbError) throw dbError;
+
+                    setFiles(prev => {
+                        const next = [...prev];
+                        next[i].status = 'success';
+                        return next;
+                    });
+                }
+
+                setIsComplete(true);
+                toast.success("Successfully uploaded your style assets!");
             }
 
-            setIsComplete(true);
-            toast.success("Successfully uploaded your style assets!");
         } catch (error: any) {
-            console.error("Critical Upload Error:", error);
-            console.error("Error Details:", {
-                message: error.message,
-                code: error.code,
-                details: error.details,
-                hint: error.hint
-            });
+            console.error("Upload Error:", error);
             toast.error(`Upload Failed: ${error.message || "Unknown error"}`);
         } finally {
             setIsProcessing(false);
@@ -156,7 +184,7 @@ export default function IntakeUploader({ token, isGuest, locale }: IntakeUploade
                         Begin your journey by exploring our Masterclass collections, where the language of style comes to life.
                     </p>
                     <a
-                        href={`/${locale}/vault/gallery`} // Corrected link
+                        href={`/${locale}/vault/gallery`}
                         className="block w-full bg-ac-taupe text-center text-white py-4 px-6 rounded-sm font-bold uppercase tracking-widest text-xs hover:bg-ac-gold transition-all"
                     >
                         Explore the Collections
@@ -226,7 +254,7 @@ export default function IntakeUploader({ token, isGuest, locale }: IntakeUploade
                         className="aspect-[3/4] border-2 border-dashed border-ac-taupe/20 rounded-sm flex flex-col items-center justify-center text-ac-taupe/40 hover:border-ac-gold/40 hover:text-ac-gold transition-all bg-white/10"
                     >
                         <Plus size={32} strokeWidth={1} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest mt-2">Add Photo</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest mt-2">{files.length === 0 ? "Add Photos" : "Add More"}</span>
                     </button>
                 </div>
 
@@ -248,12 +276,12 @@ export default function IntakeUploader({ token, isGuest, locale }: IntakeUploade
                     {isProcessing ? (
                         <>
                             <Loader2 size={20} className="animate-spin" />
-                            Processing...
+                            {isGuest ? "Uploading Securely..." : "Processing..."}
                         </>
                     ) : (
                         <>
                             <Upload size={20} />
-                            Complete Intake
+                            {isGuest ? "Send Intake & Secure Vault" : "Complete Intake"}
                         </>
                     )}
                 </button>
