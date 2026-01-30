@@ -17,9 +17,11 @@ import { toast } from "sonner";
 import { Folder, FileVideo, Plus, Users, Tag, Sparkles } from "lucide-react";
 
 import StudioInbox from "./StudioInbox";
+import AdminNotificationsPanel from "./AdminNotificationsPanel";
+import { getUnreadNotificationCount } from "@/app/actions/notifications";
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'inbox' | 'masterclasses' | 'chapters' | 'clients' | 'boutique' | 'services'>('inbox');
+    const [activeTab, setActiveTab] = useState<'inbox' | 'notifications' | 'masterclasses' | 'chapters' | 'clients' | 'boutique' | 'services'>('notifications');
 
     // Data
     const [chapters, setChapters] = useState<any[]>([]);
@@ -27,6 +29,8 @@ export default function AdminDashboard() {
     const [services, setServices] = useState<any[]>([]);
     // Inbox Count
     const [inboxCount, setInboxCount] = useState(0);
+    // Notifications Count
+    const [notificationsCount, setNotificationsCount] = useState(0);
 
     // Forms & Modals
     const [isCreating, setIsCreating] = useState(false);
@@ -54,6 +58,10 @@ export default function AdminDashboard() {
         if (mRes.success) setMasterclasses(mRes.masterclasses || []);
         if (sRes.success) setServices(sRes.services || []);
         if (iRes.success) setInboxCount(iRes.data?.length || 0);
+
+        // Fetch notification count separately
+        const notifCount = await getUnreadNotificationCount();
+        setNotificationsCount(notifCount);
     };
 
     useEffect(() => {
@@ -116,6 +124,23 @@ export default function AdminDashboard() {
                         )}
                     </div>
                     Inbox
+                </button>
+                <button
+                    onClick={() => { setActiveTab('notifications'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
+                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'notifications'
+                        ? 'text-ac-taupe border-b-2 border-ac-gold'
+                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
+                        }`}
+                >
+                    <div className="relative">
+                        <Sparkles size={18} />
+                        {notificationsCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                                {notificationsCount}
+                            </span>
+                        )}
+                    </div>
+                    Notify
                 </button>
                 <button
                     onClick={() => { setActiveTab('masterclasses'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
@@ -254,6 +279,12 @@ export default function AdminDashboard() {
             {
                 activeTab === 'inbox' && (
                     <StudioInbox />
+                )
+            }
+
+            {
+                activeTab === 'notifications' && (
+                    <AdminNotificationsPanel />
                 )
             }
 

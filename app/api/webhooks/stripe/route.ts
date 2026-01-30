@@ -22,16 +22,17 @@ export async function POST(req: Request) {
             signature,
             process.env.STRIPE_WEBHOOK_SECRET
         );
-    } catch (err: any) {
-        console.error(`Webhook signature verification failed.`, err.message);
-        return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    } catch (err: unknown) {
+        const error = err as Error;
+        console.error(`Webhook signature verification failed.`, error.message);
+        return new Response(`Webhook Error: ${error.message}`, { status: 400 });
     }
 
     // Use Admin Client to bypass RLS for Webhook operations
     const supabase = createAdminClient();
 
     // Helper to log to DB
-    const logEvent = async (status: string, message?: string, details?: any) => {
+    const logEvent = async (status: string, message?: string, details?: unknown) => {
         try {
             await supabase.from('webhook_events').insert({
                 event_type: event?.type || 'unknown',
@@ -57,6 +58,11 @@ export async function POST(req: Request) {
             client_ref: userId,
             metadata: session.metadata
         });
+
+        // Extract Customer Details
+        const customerEmail = session.customer_details?.email || session.customer_email || 'No Email';
+        const customerPhone = session.customer_details?.phone || 'No Phone';
+        const customerName = session.customer_details?.name || 'No Name';
 
         if (!finalUserId) {
             console.error('[Stripe Webhook] No userId found in session');
@@ -107,10 +113,49 @@ export async function POST(req: Request) {
                     console.log(`[Stripe Webhook] No matching content found for Product ID: ${stripeProductId}`);
                     await logEvent('warning', `No content match for Product ID: ${stripeProductId}`);
                 }
+
+                // 3. Notify Admin via Notifications System (If it's a Service)
+                try {
+                    const { data: service } = await supabase
+                        .from('services')
+                        .select('title, image_url')
+                        .eq('stripe_product_id', stripeProductId)
+                        .single();
+
+                    if (service) {
+                        const { error: notificationError } = await supabase.from('admin_notifications').insert({
+                            type: 'service_booking',
+                            title: `New Booking: ${service.title}`,
+                            message: `${customerName} has booked ${service.title}.`,
+                            user_id: finalUserId,
+                            reference_id: session.id,
+                            status: 'unread',
+                            metadata: {
+                                customerName,
+                                email: customerEmail,
+                                phone: customerPhone,
+                                amount: item.amount_total ? (item.amount_total / 100).toFixed(2) : '0.00',
+                                currency: item.currency?.toUpperCase() || 'USD',
+                                serviceTitle: service.title,
+                                serviceImage: service.image_url
+                            }
+                        });
+
+                        if (notificationError) {
+                            console.error('[Stripe Webhook] Notification Insert Error:', notificationError);
+                            await logEvent('error', `Admin Notification Failed: ${notificationError.message}`);
+                        } else {
+                            await logEvent('notification', `Admin notification sent for ${service.title}`);
+                        }
+                    }
+                } catch (notifyErr) {
+                    console.error('[Stripe Webhook] Notification Logic Error:', notifyErr);
+                }
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const error = err as Error;
             console.error('Error processing checkout session:', err);
-            await logEvent('fatal_error', err.message);
+            await logEvent('fatal_error', error.message);
             return new Response('Error processing session', { status: 500 });
         }
     }

@@ -25,15 +25,41 @@ export default function TailorCard({ clientId }: TailorCardProps) {
     const [isActiveClient, setIsActiveClient] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [ownerId, setOwnerId] = useState<string | null>(null);
     const supabase = createClient();
 
     useEffect(() => {
         async function loadData() {
             setLoading(true);
+
+            // First, get the wardrobe to find the owner_id (clientId is now a wardrobe ID)
+            const { data: wardrobe, error: wardrobeError } = await supabase
+                .from('wardrobes')
+                .select('owner_id')
+                .eq('id', clientId)
+                .single();
+
+            if (wardrobeError || !wardrobe) {
+                setLoading(false);
+                return;
+            }
+
+            const ownerId = wardrobe.owner_id;
+
+            // If no owner, show empty state
+            if (!ownerId) {
+                setMeasurements({});
+                setDna([]);
+                setIsActiveClient(false);
+                setLoading(false);
+                return;
+            }
+
+            // Fetch profile-based data using owner_id
             const [tailorRes, dnaRes, profileRes] = await Promise.all([
-                supabase.from('tailor_cards').select('measurements').eq('user_id', clientId).single(),
-                supabase.from('essence_responses').select('*').eq('user_id', clientId),
-                supabase.from('profiles').select('active_studio_client').eq('id', clientId).single()
+                supabase.from('tailor_cards').select('measurements').eq('user_id', ownerId).single(),
+                supabase.from('essence_responses').select('*').eq('user_id', ownerId),
+                supabase.from('profiles').select('active_studio_client').eq('id', ownerId).single()
             ]);
 
             if (tailorRes.data) {
@@ -44,6 +70,7 @@ export default function TailorCard({ clientId }: TailorCardProps) {
 
             setDna(dnaRes.data || []);
             setIsActiveClient(profileRes.data?.active_studio_client || false);
+            setOwnerId(ownerId);
             setLoading(false);
         }
 
@@ -51,13 +78,14 @@ export default function TailorCard({ clientId }: TailorCardProps) {
     }, [clientId, supabase]);
 
     const handleUpdate = async (key: string, value: string) => {
+        if (!ownerId) return; // Can't save without an owner
         const newMeasurements = { ...measurements, [key]: value };
         setMeasurements(newMeasurements);
         setSaving(true);
         const { error } = await supabase
             .from('tailor_cards')
             .upsert({
-                user_id: clientId,
+                user_id: ownerId,
                 measurements: newMeasurements,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_id' });
@@ -67,12 +95,13 @@ export default function TailorCard({ clientId }: TailorCardProps) {
     };
 
     const toggleActiveStatus = async () => {
+        if (!ownerId) return; // Can't toggle without an owner
         const newValue = !isActiveClient;
         setIsActiveClient(newValue);
         const { error } = await supabase
             .from('profiles')
             .update({ active_studio_client: newValue })
-            .eq('id', clientId);
+            .eq('id', ownerId);
 
         if (error) {
             toast.error("Failed to update status");

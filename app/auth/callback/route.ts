@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { claimWardrobe } from '@/app/actions/wardrobes'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
@@ -36,6 +37,13 @@ export async function GET(request: Request) {
                     await supabase.from('profiles').delete().eq('id', pendingProfile.id);
                     cookieStore.delete('intake_token');
                 }
+            }
+
+            // WARDROBE CLAIM LOGIC
+            const wardrobeClaimToken = cookieStore.get('wardrobe_claim_token')?.value;
+            if (wardrobeClaimToken) {
+                await claimWardrobe(wardrobeClaimToken);
+                cookieStore.delete('wardrobe_claim_token');
             }
 
             const forwardedHost = request.headers.get('x-forwarded-host')

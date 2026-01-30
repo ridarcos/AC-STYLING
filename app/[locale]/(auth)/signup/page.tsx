@@ -12,6 +12,7 @@ export default function SignupPage() {
     const [message, setMessage] = useState<string | null>(null);
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
+    const wardrobeToken = searchParams.get('wardrobe');
 
     const supabase = createClient();
 
@@ -20,7 +21,10 @@ export default function SignupPage() {
             // Store token in cookie so callback can find it
             document.cookie = `intake_token=${token}; path=/; max-age=3600; SameSite=Lax`;
         }
-    }, [token]);
+        if (wardrobeToken) {
+            document.cookie = `wardrobe_claim_token=${wardrobeToken}; path=/; max-age=3600; SameSite=Lax`;
+        }
+    }, [token, wardrobeToken]);
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();

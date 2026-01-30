@@ -81,9 +81,9 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                     Back to Collections
                 </Link>
 
-                <div className="flex flex-col md:flex-row gap-8 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                     {/* Thumbnail */}
-                    <div className="w-full md:w-1/3 aspect-video rounded-sm overflow-hidden shadow-lg relative group">
+                    <div className="lg:col-span-3 aspect-video rounded-sm overflow-hidden shadow-lg relative group">
                         <img
                             src={masterclass.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
                             alt={mcTitle}
@@ -96,20 +96,20 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                         )}
                     </div>
 
-                    {/* Info */}
-                    <div className="flex-1">
+                    {/* Info + CTA */}
+                    <div className="lg:col-span-5">
                         <span className="inline-block px-3 py-1 mb-3 text-xs font-bold tracking-widest uppercase bg-ac-gold/10 text-ac-gold rounded-sm">
                             Masterclass Collection
                         </span>
-                        <h1 className="font-serif text-4xl md:text-5xl text-ac-taupe mb-4">
+                        <h1 className="font-serif text-4xl md:text-5xl text-ac-taupe mb-3">
                             {mcTitle}
                         </h1>
-                        <p className="text-ac-taupe/80 text-lg leading-relaxed max-w-2xl mb-6">
-                            {mcDescription}
+                        <p className="text-ac-taupe/70 text-base mb-6">
+                            {masterclass.subtitle || (locale === 'es' && masterclass.subtitle_es ? masterclass.subtitle_es : '')}
                         </p>
 
                         {/* CTA / Progress Bar */}
-                        <div className="max-w-md space-y-6">
+                        <div className="space-y-4">
                             {hasAccess ? (
                                 <>
                                     <div className="flex justify-between text-xs uppercase tracking-widest text-ac-taupe/60 mb-2">
@@ -145,6 +145,18 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                             )}
                         </div>
                     </div>
+
+                    {/* About This Masterclass Box */}
+                    {mcDescription && (
+                        <div className="lg:col-span-4 bg-white/60 backdrop-blur-sm border border-ac-taupe/10 rounded-sm p-6 shadow-sm">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-ac-gold mb-4">
+                                {locale === 'es' ? 'Acerca de este Masterclass' : 'About This Masterclass'}
+                            </h3>
+                            <div className="text-ac-taupe/80 text-sm leading-relaxed whitespace-pre-line">
+                                {mcDescription}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

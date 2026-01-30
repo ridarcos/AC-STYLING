@@ -3,6 +3,11 @@
 import { motion, Variants } from "framer-motion";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { createCheckoutSession } from "@/app/actions/stripe";
+import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Check, X } from "lucide-react";
 
 interface Service {
     id: string;
@@ -11,6 +16,7 @@ interface Service {
     subtitle?: string;
     price_display: string;
     stripe_url: string;
+    price_id?: string;
     image_url: string;
     type?: string;
 }
@@ -45,20 +51,85 @@ const cardVariants: Variants = {
 
 export default function ServicesGrid({ sessionServices, retainerService, recommendedServiceId, recommendationReason }: ServicesGridProps) {
     const t = useTranslations('Studio');
+    const searchParams = useSearchParams();
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('checkout_success')) {
+            setShowSuccess(true);
+            // Clean URL without refresh
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, [searchParams]);
+
+    const handleCheckout = async (priceId: string) => {
+        if (!priceId) {
+            toast.error("Configuration Error: Missing Price ID");
+            return;
+        }
+
+        const toastId = toast.loading("Securely redirecting to Stripe...");
+
+        try {
+            const { url, error } = await createCheckoutSession(priceId, '/vault/services');
+            if (error) throw new Error(error);
+            if (url) window.location.href = url;
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : "Checkout initialization failed";
+            toast.error(errorMessage, { id: toastId });
+        }
+    };
 
     return (
         <div className="space-y-8">
+            {/* Success Modal */}
+            {showSuccess && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-[#fcfbf9] rounded-sm p-8 max-w-md w-full shadow-2xl border border-ac-gold/20 relative"
+                    >
+                        <button
+                            onClick={() => setShowSuccess(false)}
+                            className="absolute top-4 right-4 text-ac-taupe/40 hover:text-ac-gold transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-16 h-16 rounded-full bg-ac-olive/10 flex items-center justify-center text-ac-olive mb-2">
+                                <Check size={32} />
+                            </div>
+
+                            <h2 className="font-serif text-3xl text-ac-taupe">Request Received</h2>
+
+                            <div className="space-y-2 text-sm text-ac-taupe/80 font-sans leading-relaxed">
+                                <p>Thank you for your trust.</p>
+                                <p>Alejandra has been notified and your request is now in her personal studio inbox.</p>
+                                <p className="pt-2 text-ac-taupe/60 text-xs uppercase tracking-widest">She will be in touch shortly.</p>
+                            </div>
+
+                            <button
+                                onClick={() => setShowSuccess(false)}
+                                className="mt-6 px-8 py-3 bg-ac-taupe text-white text-xs font-bold uppercase tracking-widest hover:bg-ac-gold transition-colors w-full rounded-sm"
+                            >
+                                Return to Vault
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {/* 1. TOP: The Retainer Horizon (Slim Watermark) */}
             {retainerService && (
-                <motion.a
-                    href={retainerService.stripe_url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <motion.div
+                    onClick={() => handleCheckout(retainerService.price_id || '')}
                     variants={retainerVariants}
                     initial="hidden"
                     animate="show"
-                    className="group relative block w-full bg-[#C5A059] rounded-sm overflow-hidden shadow-md hover:shadow-xl transition-all duration-700 h-[100px]"
+                    className="group relative block w-full bg-[#C5A059] rounded-sm overflow-hidden shadow-md hover:shadow-xl transition-all duration-700 h-[100px] cursor-pointer"
                 >
                     {/* Watermark Background */}
                     <div className="absolute inset-0 z-0 overflow-hidden">
@@ -106,7 +177,7 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
                             </div>
                         </div>
                     </div>
-                </motion.a>
+                </motion.div>
             )}
 
 
@@ -140,13 +211,11 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
                         const isRecommended = service.id === recommendedServiceId;
 
                         return (
-                            <motion.a
+                            <motion.div
                                 key={service.id}
-                                href={service.stripe_url || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                onClick={() => handleCheckout(service.price_id || '')}
                                 variants={cardVariants}
-                                className={`group relative flex flex-col bg-white/40 backdrop-blur-md rounded-sm overflow-hidden border transition-all duration-500 hover:shadow-lg ${isRecommended
+                                className={`group relative flex flex-col bg-white/40 backdrop-blur-md rounded-sm overflow-hidden border transition-all duration-500 hover:shadow-lg cursor-pointer ${isRecommended
                                     ? 'border-ac-gold shadow-md ring-1 ring-ac-gold/20 z-10'
                                     : 'border-white/30 hover:border-ac-taupe/20'
                                     }`}
@@ -208,7 +277,7 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
                                         </div>
                                     </div>
                                 </div>
-                            </motion.a>
+                            </motion.div>
                         );
                     })}
                 </motion.div>

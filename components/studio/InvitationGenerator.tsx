@@ -23,12 +23,12 @@ export default function InvitationGenerator({ onClose }: { onClose: () => void }
         try {
             const result = await generateInvitation(name, email, note);
 
-            if (result.success && result.token) {
-                // Construct full URL
+            if (result.success && result.uploadToken) {
+                // Construct full URL using the wardrobe upload token
                 const origin = window.location.origin;
-                const link = `${origin}/studio/intake/${result.token}`;
+                const link = `${origin}/studio/upload/${result.uploadToken}`;
                 setGeneratedLink(link);
-                toast.success("Invitation Link Generated!");
+                toast.success("Wardrobe Upload Link Generated!");
             } else {
                 toast.error(result.error || "Failed to generate link");
             }
@@ -89,7 +89,7 @@ export default function InvitationGenerator({ onClose }: { onClose: () => void }
                     </div>
 
                     <div className="bg-ac-taupe/5 p-4 rounded-sm text-xs text-ac-taupe/60 italic">
-                        <p>This will create a "Pending Guest" profile. The link is valid immediately.</p>
+                        <p>This creates a wardrobe with a secure upload link. No guest account needed.</p>
                     </div>
 
                     <button

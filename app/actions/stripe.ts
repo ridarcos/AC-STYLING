@@ -48,6 +48,9 @@ export async function createCheckoutSession(priceId: string, returnUrl: string) 
             metadata: {
                 userId: user.id,
             },
+            phone_number_collection: {
+                enabled: true,
+            },
         };
 
         // Only add customer_email if it exists and is valid

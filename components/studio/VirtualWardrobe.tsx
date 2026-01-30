@@ -49,7 +49,7 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
         async function loadData() {
             setLoading(true);
             const [wardrobeRes, boutiqueRes] = await Promise.all([
-                supabase.from('wardrobe_items').select('*').eq('user_id', clientId).order('created_at', { ascending: false }),
+                supabase.from('wardrobe_items').select('*').eq('wardrobe_id', clientId).order('created_at', { ascending: false }),
                 supabase.from('boutique_items').select('*')
             ]);
 

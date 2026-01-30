@@ -35,17 +35,17 @@ export default function DigitalLookbook({ clientId }: DigitalLookbookProps) {
             const [lookbooksRes, wardrobeRes] = await Promise.all([
                 supabase.from('lookbooks')
                     .select('*, lookbook_items(item_id)')
-                    .eq('user_id', clientId)
+                    .eq('wardrobe_id', clientId)
                     .order('created_at', { ascending: false }),
-                supabase.from('wardrobe_items').select('*').eq('user_id', clientId)
+                supabase.from('wardrobe_items').select('*').eq('wardrobe_id', clientId)
             ]);
 
             setLookbooks(lookbooksRes.data || []);
             setWardrobeItems(wardrobeRes.data || []);
 
-            // Fetch potential clone targets
-            const { data: clients } = await supabase.from('profiles').select('id, full_name').neq('id', clientId);
-            setAllClients(clients || []);
+            // Fetch potential clone targets (other wardrobes)
+            const { data: wardrobes } = await supabase.from('wardrobes').select('id, title').neq('id', clientId);
+            setAllClients(wardrobes || []);
 
             setLoading(false);
         }
@@ -59,7 +59,7 @@ export default function DigitalLookbook({ clientId }: DigitalLookbookProps) {
         const { data, error } = await supabase
             .from('lookbooks')
             .insert({
-                user_id: clientId,
+                wardrobe_id: clientId,
                 title: newTitle,
                 collection_name: newCollection,
                 status: 'Draft'
