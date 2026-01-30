@@ -77,40 +77,45 @@ export async function createWardrobe(
     wardrobe?: Wardrobe;
     error?: string;
 }> {
-    const supabase = await createClient();
+    try {
+        const supabase = await createClient();
 
-    // Check admin
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: "Unauthorized" };
+        // Check admin
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: "Unauthorized" };
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
 
-    if (profile?.role !== 'admin') {
-        return { success: false, error: "Unauthorized" };
+        if (profile?.role !== 'admin') {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        const adminSupabase = createAdminClient();
+
+        const { data, error } = await adminSupabase
+            .from('wardrobes')
+            .insert({
+                title,
+                owner_id: ownerId || null,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating wardrobe:', error);
+            return { success: false, error: error.message };
+        }
+
+        revalidatePath('/vault/studio');
+        return { success: true, wardrobe: data as Wardrobe };
+    } catch (error: any) {
+        console.error("Critical Error in createWardrobe:", error);
+        return { success: false, error: error.message || "Internal Server Error" };
     }
-
-    const adminSupabase = createAdminClient();
-
-    const { data, error } = await adminSupabase
-        .from('wardrobes')
-        .insert({
-            title,
-            owner_id: ownerId || null,
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating wardrobe:', error);
-        return { success: false, error: error.message };
-    }
-
-    revalidatePath('/vault/studio');
-    return { success: true, wardrobe: data as Wardrobe };
 }
 
 // =============================================================================

@@ -157,8 +157,9 @@ export default function StudioDashboard({ locale }: StudioDashboardProps) {
 
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">Wardrobe Name</label>
+                                    <label htmlFor="wardrobeName" className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">Wardrobe Name</label>
                                     <input
+                                        id="wardrobeName"
                                         type="text"
                                         value={newClientName}
                                         onChange={(e) => setNewClientName(e.target.value)}
