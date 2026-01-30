@@ -5,7 +5,8 @@ import { createClient } from "@/utils/supabase/client";
 import { Plus, Tag, MessageSquare, Briefcase, ShoppingBag, ExternalLink, Loader2, Filter, Search, X, Check, Image as ImageIcon, Link as LinkIcon, Camera, Sparkles, Trash2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { extractUrlMetadata, uploadRemoteImage } from "@/app/actions/studio";
+import { uploadRemoteImage } from "@/app/actions/studio";
+import { extractUrlMetadata } from "@/app/actions/scraper";
 
 interface VirtualWardrobeProps {
     clientId: string;
