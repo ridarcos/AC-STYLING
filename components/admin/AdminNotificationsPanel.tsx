@@ -15,7 +15,8 @@ import {
     Phone,
     Mail,
     ChevronDown,
-    Filter
+    Filter,
+    ShoppingBag
 } from "lucide-react";
 import {
     getAdminNotifications,
@@ -43,33 +44,42 @@ function formatDistanceToNow(date: Date | string) {
 const typeIcons: Record<string, React.ReactNode> = {
     'service_booking': <Calendar size={16} />,
     'masterclass_purchase': <DollarSign size={16} />,
+    'course_sale': <DollarSign size={16} />,
+    'offer_sale': <DollarSign size={16} />,
     'sale': <DollarSign size={16} />,
+    'wardrobe_item': <ShoppingBag size={16} />,
     'general': <Bell size={16} />,
 };
 
 // Type colors
 const typeColors: Record<string, string> = {
-    'service_booking': 'bg-blue-100 text-blue-600',
-    'masterclass_purchase': 'bg-green-100 text-green-600',
-    'sale': 'bg-emerald-100 text-emerald-600',
+    'service_booking': 'bg-ac-olive/10 text-ac-olive', // Services = Olive
+    'masterclass_purchase': 'bg-green-100 text-green-700', // Sales = Green
+    'course_sale': 'bg-green-100 text-green-700',
+    'offer_sale': 'bg-green-100 text-green-700',
+    'sale': 'bg-green-100 text-green-700',
+    'wardrobe_item': 'bg-blue-50 text-blue-600', // Inbox = Blue
     'general': 'bg-gray-100 text-gray-600',
 };
+
+type FilterTab = 'all' | 'sales' | 'services' | 'inbox';
 
 export default function AdminNotificationsPanel() {
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [filter, setFilter] = useState<'all' | 'unread'>('all');
-    const [showFilters, setShowFilters] = useState(false);
+    const [activeTab, setActiveTab] = useState<FilterTab>('all');
+    const [showRead, setShowRead] = useState(false); // Default to unread only initially? Or generic filter.
 
     useEffect(() => {
         loadNotifications();
-    }, [filter]);
+    }, []);
 
     const loadNotifications = async () => {
         setLoading(true);
-        const filterParams = filter === 'unread' ? { status: 'unread' as NotificationStatus } : undefined;
-        const res = await getAdminNotifications(filterParams);
+        // Load ALL notifications initially to allow client-side filtering responsiveness
+        // Optimization: In a huge app, we'd filter on backend. Here, volume is manageable.
+        const res = await getAdminNotifications();
         if (res.success) {
             setNotifications(res.data || []);
         } else {
@@ -117,6 +127,24 @@ export default function AdminNotificationsPanel() {
         }
     };
 
+    // Filter Logic
+    const filteredNotifications = notifications.filter(n => {
+        // 1. Status Filter (Hide read if toggle is off? Optional. Let's show all for now but sort unread first)
+        // Just keeping simple "All" vs "Unread" toggle logic if needed, but for now showing mixed.
+
+        // 2. Tab Filter
+        if (activeTab === 'sales') {
+            return ['masterclass_purchase', 'course_sale', 'offer_sale', 'sale'].includes(n.type);
+        }
+        if (activeTab === 'services') {
+            return n.type === 'service_booking';
+        }
+        if (activeTab === 'inbox') {
+            return ['wardrobe_item', 'general'].includes(n.type);
+        }
+        return true;
+    });
+
     const unreadCount = notifications.filter(n => n.status === 'unread').length;
 
     if (loading) {
@@ -141,19 +169,11 @@ export default function AdminNotificationsPanel() {
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    {unreadCount > 0 && (
-                        <button
-                            onClick={handleMarkAllRead}
-                            className="text-xs text-ac-taupe/60 hover:text-ac-gold transition-colors flex items-center gap-1"
-                        >
-                            <CheckCheck size={14} /> Mark all read
-                        </button>
-                    )}
                     <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={`p-2 rounded-sm transition-colors ${showFilters ? 'bg-ac-taupe/10 text-ac-taupe' : 'text-ac-taupe/40 hover:text-ac-gold'}`}
+                        onClick={handleMarkAllRead}
+                        className="text-xs text-ac-taupe/60 hover:text-ac-gold transition-colors flex items-center gap-1 mr-2"
                     >
-                        <Filter size={18} />
+                        <CheckCheck size={14} /> Mark all read
                     </button>
                     <button
                         onClick={loadNotifications}
@@ -164,39 +184,48 @@ export default function AdminNotificationsPanel() {
                 </div>
             </div>
 
-            {/* Filters */}
-            {showFilters && (
-                <div className="mb-4 flex gap-2">
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 border-b border-ac-taupe/10 pb-1">
+                {[
+                    { id: 'all', label: 'All' },
+                    { id: 'sales', label: 'Sales' },
+                    { id: 'services', label: 'Services' },
+                    { id: 'inbox', label: 'Inbox' },
+                ].map((tab) => (
                     <button
-                        onClick={() => setFilter('all')}
-                        className={`px-3 py-1 text-xs rounded-sm transition-colors ${filter === 'all' ? 'bg-ac-taupe text-white' : 'bg-ac-taupe/10 text-ac-taupe hover:bg-ac-taupe/20'}`}
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as FilterTab)}
+                        className={`px-4 py-2 text-sm font-medium transition-colors relative ${activeTab === tab.id
+                                ? 'text-ac-taupe'
+                                : 'text-ac-taupe/40 hover:text-ac-taupe/70'
+                            }`}
                     >
-                        All
+                        {tab.label}
+                        {activeTab === tab.id && (
+                            <motion.div
+                                layoutId="activeTab"
+                                className="absolute bottom-[-5px] left-0 right-0 h-[2px] bg-ac-gold"
+                            />
+                        )}
                     </button>
-                    <button
-                        onClick={() => setFilter('unread')}
-                        className={`px-3 py-1 text-xs rounded-sm transition-colors ${filter === 'unread' ? 'bg-ac-taupe text-white' : 'bg-ac-taupe/10 text-ac-taupe hover:bg-ac-taupe/20'}`}
-                    >
-                        Unread Only
-                    </button>
-                </div>
-            )}
+                ))}
+            </div>
 
             {/* Empty State */}
-            {notifications.length === 0 && (
+            {filteredNotifications.length === 0 && (
                 <div className="p-16 text-center border-2 border-dashed border-ac-taupe/10 rounded-sm">
                     <div className="inline-block p-4 bg-ac-olive/10 rounded-full mb-4 text-ac-olive">
                         <Bell size={32} />
                     </div>
                     <h3 className="font-serif text-2xl text-ac-taupe mb-2">All caught up!</h3>
-                    <p className="text-ac-taupe/60">No notifications to display.</p>
+                    <p className="text-ac-taupe/60">No notifications in this category.</p>
                 </div>
             )}
 
             {/* List */}
             <div className="space-y-3">
-                <AnimatePresence>
-                    {notifications.map((notification) => (
+                <AnimatePresence mode='popLayout'>
+                    {filteredNotifications.map((notification) => (
                         <NotificationCard
                             key={notification.id}
                             notification={notification}
@@ -233,7 +262,7 @@ function NotificationCard({
             layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             className={`relative bg-white rounded-sm shadow-sm border transition-all ${isUnread ? 'border-ac-gold/30 bg-ac-gold/5' : 'border-ac-taupe/10'
                 } ${isActioned ? 'opacity-60' : ''}`}
         >
@@ -320,8 +349,13 @@ function NotificationCard({
                             </div>
                         )}
                         {metadata.amount && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 font-semibold text-ac-taupe">
                                 <DollarSign size={12} /> {metadata.amount} {metadata.currency || 'USD'}
+                            </div>
+                        )}
+                        {metadata.serviceTitle && (
+                            <div className="flex items-center gap-1 col-span-2">
+                                <span className="font-semibold text-[10px] uppercase tracking-wider">Product:</span> {metadata.serviceTitle}
                             </div>
                         )}
                     </div>

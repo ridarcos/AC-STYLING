@@ -114,15 +114,62 @@ export async function POST(req: Request) {
                     await logEvent('warning', `No content match for Product ID: ${stripeProductId}`);
                 }
 
-                // 3. Notify Admin via Notifications System (If it's a Service)
+                // 3. Notify Admin via Notifications System
                 try {
+                    // Strategy: Check what kind of product this is
+
+                    // A. Services
                     const { data: service } = await supabase
                         .from('services')
                         .select('title, image_url')
                         .eq('stripe_product_id', stripeProductId)
                         .single();
 
+                    // B. Masterclasses
+                    const { data: masterclass } = !service ? await supabase
+                        .from('masterclasses')
+                        .select('title, thumbnail_url')
+                        .eq('stripe_product_id', stripeProductId)
+                        .single() : { data: null };
+
+                    // C. Individual Chapters (Courses)
+                    const { data: chapter } = (!service && !masterclass) ? await supabase
+                        .from('chapters')
+                        .select('title, thumbnail_url')
+                        .eq('stripe_product_id', stripeProductId)
+                        .single() : { data: null };
+
+                    // D. Offers
+                    const { data: offer } = (!service && !masterclass && !chapter) ? await supabase
+                        .from('offers')
+                        .select('title, slug') // Offers might not have image, or use static
+                        .eq('stripe_product_id', stripeProductId)
+                        .single() : { data: null };
+
+                    // Determine Notification Type & Data
+                    let notificationType = '';
+                    let productTitle = '';
+                    let productImage = '';
+
                     if (service) {
+                        notificationType = 'service_booking';
+                        productTitle = service.title;
+                        productImage = service.image_url;
+                    } else if (masterclass) {
+                        notificationType = 'masterclass_purchase';
+                        productTitle = masterclass.title;
+                        productImage = masterclass.thumbnail_url;
+                    } else if (chapter) {
+                        notificationType = 'course_sale';
+                        productTitle = chapter.title;
+                        productImage = chapter.thumbnail_url;
+                    } else if (offer) {
+                        notificationType = 'offer_sale';
+                        productTitle = offer.title;
+                        productImage = '';
+                    }
+
+                    if (notificationType) {
                         // Verify Profile Exists to avoid FK Constraint Error
                         const { data: profileExists } = await supabase
                             .from('profiles')
@@ -135,9 +182,9 @@ export async function POST(req: Request) {
                         const fallbackMessage = !profileExists ? ` (Profile Missing: ${finalUserId})` : "";
 
                         const { error: notificationError } = await supabase.from('admin_notifications').insert({
-                            type: 'service_booking',
-                            title: `New Booking: ${service.title}`,
-                            message: `${customerName} has booked ${service.title}.${fallbackMessage}`,
+                            type: notificationType,
+                            title: `New Sale: ${productTitle}`,
+                            message: `${customerName} purchased ${productTitle}.${fallbackMessage}`,
                             user_id: notificationUserId,
                             reference_id: session.id,
                             status: 'unread',
@@ -148,8 +195,8 @@ export async function POST(req: Request) {
                                 phone: customerPhone,
                                 amount: item.amount_total ? (item.amount_total / 100).toFixed(2) : '0.00',
                                 currency: item.currency?.toUpperCase() || 'USD',
-                                serviceTitle: service.title,
-                                serviceImage: service.image_url
+                                serviceTitle: productTitle,
+                                serviceImage: productImage
                             }
                         });
 
@@ -157,7 +204,7 @@ export async function POST(req: Request) {
                             console.error('[Stripe Webhook] Notification Insert Error:', notificationError);
                             await logEvent('error', `Admin Notification Failed: ${notificationError.message}`);
                         } else {
-                            await logEvent('notification', `Admin notification sent for ${service.title}`);
+                            await logEvent('notification', `Admin notification sent for ${productTitle}`);
                         }
                     }
                 } catch (notifyErr) {
