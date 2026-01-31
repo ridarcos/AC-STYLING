@@ -185,9 +185,110 @@ export async function getWardrobeByToken(token: string): Promise<{
 }
 
 // =============================================================================
-// Upload Item to Wardrobe (via token - for guests)
+// Direct Upload Flow (bypasses Vercel serverless limits)
 // =============================================================================
 
+/**
+ * Step 1: Get a signed URL for direct browser → Supabase Storage upload
+ * This validates the token and returns a URL the client can upload to directly
+ */
+export async function getSignedUploadUrl(
+    token: string,
+    fileName: string
+): Promise<{ success: boolean; signedUrl?: string; filePath?: string; error?: string }> {
+    const supabase = createAdminClient();
+
+    // 1. Validate token
+    const { data: wardrobe, error: wError } = await supabase
+        .from('wardrobes')
+        .select('id, owner_id')
+        .eq('upload_token', token)
+        .eq('status', 'active')
+        .single();
+
+    if (wError || !wardrobe) {
+        return { success: false, error: "Invalid or expired upload link" };
+    }
+
+    try {
+        // 2. Generate unique file path
+        const fileExt = fileName.split('.').pop() || 'jpg';
+        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `wardrobe/${wardrobe.id}/${uniqueName}`;
+
+        // 3. Create signed upload URL (valid for 5 minutes)
+        const { data, error: signError } = await supabase.storage
+            .from('studio-wardrobe')
+            .createSignedUploadUrl(filePath);
+
+        if (signError || !data) {
+            throw signError || new Error("Failed to create upload URL");
+        }
+
+        return {
+            success: true,
+            signedUrl: data.signedUrl,
+            filePath: filePath
+        };
+
+    } catch (error: any) {
+        console.error("Signed URL Error:", error);
+        return { success: false, error: error.message || "Failed to prepare upload" };
+    }
+}
+
+/**
+ * Step 2: Create the wardrobe item record after client uploads directly to storage
+ */
+export async function createWardrobeItem(
+    token: string,
+    filePath: string,
+    category: string,
+    note: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = createAdminClient();
+
+    // 1. Validate token
+    const { data: wardrobe, error: wError } = await supabase
+        .from('wardrobes')
+        .select('id, owner_id')
+        .eq('upload_token', token)
+        .eq('status', 'active')
+        .single();
+
+    if (wError || !wardrobe) {
+        return { success: false, error: "Invalid or expired upload link" };
+    }
+
+    try {
+        // 2. Get public URL for the uploaded file
+        const { data: { publicUrl } } = supabase.storage
+            .from('studio-wardrobe')
+            .getPublicUrl(filePath);
+
+        // 3. Insert into database
+        const { error: dbError } = await supabase
+            .from('wardrobe_items')
+            .insert({
+                wardrobe_id: wardrobe.id,
+                user_id: wardrobe.owner_id,
+                image_url: publicUrl,
+                client_note: note || "",
+                category: category || null,
+                status: 'inbox'
+            });
+
+        if (dbError) throw dbError;
+
+        return { success: true };
+
+    } catch (error: any) {
+        console.error("Create Item Error:", error);
+        return { success: false, error: error.message || "Failed to save item" };
+    }
+}
+
+// Legacy function - kept for backward compatibility but now uses direct upload internally
 export async function uploadToWardrobe(
     formData: FormData,
     token: string

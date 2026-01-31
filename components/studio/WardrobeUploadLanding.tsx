@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Check, Loader2, Camera, Sparkles, X, LogIn, ChevronRight, ImagePlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { uploadToWardrobe } from "@/app/actions/wardrobes";
+import { getSignedUploadUrl, createWardrobeItem } from "@/app/actions/wardrobes";
 import type { Wardrobe } from "@/app/actions/wardrobes";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -120,7 +120,7 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
         });
     };
 
-    // Upload all staged files
+    // Upload all staged files using direct upload to Supabase (bypasses Vercel limits)
     const handleUploadAll = async () => {
         if (stagedFiles.length === 0) return;
 
@@ -129,19 +129,42 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
 
         for (const staged of stagedFiles) {
             try {
-                const formData = new FormData();
-                formData.append('file', staged.file);
-                formData.append('note', staged.note);
-                formData.append('category', staged.category);
+                // Step 1: Get signed upload URL from server
+                const urlResult = await getSignedUploadUrl(token, staged.file.name);
 
-                const result = await uploadToWardrobe(formData, token);
+                if (!urlResult.success || !urlResult.signedUrl || !urlResult.filePath) {
+                    toast.error(`Failed to prepare upload for ${staged.file.name}`);
+                    continue;
+                }
 
-                if (result.success) {
+                // Step 2: Upload directly to Supabase Storage (bypasses Vercel)
+                const uploadResponse = await fetch(urlResult.signedUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': staged.file.type || 'image/jpeg',
+                    },
+                    body: staged.file,
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error(`Storage upload failed: ${uploadResponse.status}`);
+                }
+
+                // Step 3: Create database record
+                const dbResult = await createWardrobeItem(
+                    token,
+                    urlResult.filePath,
+                    staged.category,
+                    staged.note
+                );
+
+                if (dbResult.success) {
                     successCount++;
                 } else {
-                    toast.error(`Failed to upload ${staged.file.name}`);
+                    toast.error(`Failed to save ${staged.file.name}`);
                 }
-            } catch (err) {
+            } catch (err: any) {
+                console.error('Upload error:', err);
                 toast.error(`Error uploading ${staged.file.name}`);
             }
         }
