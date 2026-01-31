@@ -197,8 +197,7 @@ export default function AdminDashboard() {
             {/* Action Bar */}
             {
                 activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'inbox' && (
-                    <div className="flex justify-between items-center">
-                        <h1 className="font-serif text-3xl text-ac-taupe">Admin Manager</h1>
+                    <div className="flex justify-end items-center">
                         <div className="flex gap-3">
                             {activeTab === 'masterclasses' && (
                                 <button
