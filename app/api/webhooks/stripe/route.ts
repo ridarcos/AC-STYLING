@@ -123,14 +123,26 @@ export async function POST(req: Request) {
                         .single();
 
                     if (service) {
+                        // Verify Profile Exists to avoid FK Constraint Error
+                        const { data: profileExists } = await supabase
+                            .from('profiles')
+                            .select('id')
+                            .eq('id', finalUserId)
+                            .single();
+
+                        // If profile missing, fallback to NULL and add note
+                        const notificationUserId = profileExists ? finalUserId : null;
+                        const fallbackMessage = !profileExists ? ` (Profile Missing: ${finalUserId})` : "";
+
                         const { error: notificationError } = await supabase.from('admin_notifications').insert({
                             type: 'service_booking',
                             title: `New Booking: ${service.title}`,
-                            message: `${customerName} has booked ${service.title}.`,
-                            user_id: finalUserId,
+                            message: `${customerName} has booked ${service.title}.${fallbackMessage}`,
+                            user_id: notificationUserId,
                             reference_id: session.id,
                             status: 'unread',
                             metadata: {
+                                original_user_id: finalUserId,
                                 customerName,
                                 email: customerEmail,
                                 phone: customerPhone,
