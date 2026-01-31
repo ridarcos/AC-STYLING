@@ -45,12 +45,13 @@ export default async function VaultPage({ params }: { params: Promise<{ locale: 
 
             {/* Main Content Grid: WhatsNew (Left) + QuickActions (Right Sidebar) */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
-                {/* Main: What's New takes 3 cols */}
-                <div className="lg:col-span-3">
+                {/* Main: What's New takes 3 cols - Order 2 on mobile, 1 on desktop */}
+                <div className="lg:col-span-3 order-2 lg:order-1">
                     <WhatsNew pulse={pulse} />
                 </div>
 
-                <div className="lg:col-span-1">
+                {/* Sidebar: Quick Actions - Order 1 on mobile, 2 on desktop */}
+                <div className="lg:col-span-1 order-1 lg:order-2">
                     <QuickActions isMasterclassComplete={completion.isComplete} />
                 </div>
             </div>
