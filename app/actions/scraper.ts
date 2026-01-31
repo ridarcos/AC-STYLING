@@ -1,10 +1,5 @@
 "use server";
 
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
-puppeteer.use(StealthPlugin());
-
 export async function extractUrlMetadata(url: string) {
     if (!url) return null;
 
@@ -12,6 +7,12 @@ export async function extractUrlMetadata(url: string) {
     const clean = (str: string | undefined | null) => str ? str.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ') : "";
 
     try {
+        // Lazy load Puppeteer to prevent bundle errors in Client Components
+        const { default: puppeteer } = await import('puppeteer-extra');
+        const { default: StealthPlugin } = await import('puppeteer-extra-plugin-stealth');
+
+        puppeteer.use(StealthPlugin());
+
         const browser = await puppeteer.launch({
             headless: true, // "new" is deprecated, true is current standard
             args: ['--no-sandbox', '--disable-setuid-sandbox']
