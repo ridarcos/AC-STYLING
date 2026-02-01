@@ -44,18 +44,12 @@ export default function SignupPage() {
         setIsLoading(true);
         setMessage(null);
 
-        // For Supabase with magic links, signUp and signIn work very similarly
-        // If the user doesn't exist, signUp creates them.
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: callbackUrl,
-                shouldCreateUser: true,
-            },
-        });
+        // Use custom action to ensure Branded Email via Resend
+        const { signUpWithMagicLink } = await import('@/app/actions/auth');
+        const result = await signUpWithMagicLink(email);
 
-        if (error) {
-            setMessage("Error: " + error.message);
+        if (result.error) {
+            setMessage("Error: " + result.error);
         } else {
             setMessage("Check your email to confirm your account!");
         }

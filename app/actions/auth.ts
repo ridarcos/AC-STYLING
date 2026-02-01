@@ -6,8 +6,9 @@ import { getMagicLinkHtml, getPasswordResetHtml } from '@/lib/email-templates';
 import { headers } from 'next/headers';
 
 export async function signInWithMagicLink(email: string) {
-    const supabase = await createClient();
     const origin = (await headers()).get('origin');
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const supabase = createAdminClient();
 
     // 1. Generate Link
     const { data, error } = await supabase.auth.admin.generateLink({
@@ -43,8 +44,9 @@ export async function signInWithMagicLink(email: string) {
 }
 
 export async function requestPasswordReset(email: string) {
-    const supabase = await createClient();
     const origin = (await headers()).get('origin');
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const supabase = createAdminClient();
 
     // 1. Generate Link
     const { data, error } = await supabase.auth.admin.generateLink({
@@ -112,4 +114,61 @@ export async function linkIntakeProfile(token: string) {
     // Delegate to the robust activation logic in studio actions
     const { activateStudioAccess } = await import('@/app/actions/studio');
     return activateStudioAccess(token);
+}
+
+export async function signUpWithMagicLink(email: string) {
+    const origin = (await headers()).get('origin');
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const adminSupabase = createAdminClient();
+
+    // 1. Try to generate Link (works if user exists)
+    let { data, error } = await adminSupabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: { redirectTo: `${origin}/auth/callback` }
+    });
+
+    // 2. If User Not Found, Create User First
+    if (error && error.message.includes("User not found")) {
+        const { error: createError } = await adminSupabase.auth.admin.createUser({
+            email,
+            email_confirm: true,
+        });
+
+        if (createError) {
+            console.error("Error creating user:", createError);
+            return { error: "Failed to create account." };
+        }
+
+        const result = await adminSupabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email,
+            options: { redirectTo: `${origin}/auth/callback` }
+        });
+        data = result.data;
+        error = result.error;
+    }
+
+    if (error) {
+        console.error('Error generating magic link:', error);
+        return { error: 'Could not generate login link. Please try again.' };
+    }
+
+    const { properties } = data;
+
+    // 3. Send Email
+    if (properties?.action_link) {
+        const { success, error: emailError } = await sendEmail({
+            to: email,
+            subject: 'Welcome to AC Styling',
+            html: getMagicLinkHtml(properties.action_link),
+        });
+
+        if (!success) {
+            console.error('Error sending magic link email:', emailError);
+            return { error: 'Failed to send email. Please try again.' };
+        }
+    }
+
+    return { success: true };
 }
