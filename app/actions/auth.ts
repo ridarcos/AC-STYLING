@@ -13,11 +13,12 @@ export async function signInWithMagicLink(email: string) {
 
     // 1. Generate Link
     console.log('Generating Magic Link...');
+    const url = new URL(`${origin}/auth/confirm`);
     const { data, error } = await supabase.auth.admin.generateLink({
         type: 'magiclink',
         email,
         options: {
-            redirectTo: `${origin}/auth/callback`,
+            redirectTo: url.toString(),
         },
     });
 
@@ -61,11 +62,14 @@ export async function requestPasswordReset(email: string) {
     const supabase = createAdminClient();
 
     // 1. Generate Link
+    const url = new URL(`${origin}/auth/confirm`);
+    url.searchParams.set('next', '/update-password');
+
     const { data, error } = await supabase.auth.admin.generateLink({
         type: 'recovery',
         email,
         options: {
-            redirectTo: `${origin}/auth/callback?next=/update-password`,
+            redirectTo: url.toString()
         },
     });
 
@@ -102,10 +106,12 @@ export async function signUpWithMagicLink(email: string) {
 
     // 1. Try to generate Link (works if user exists)
     console.log('Attempting to generate link for existing user...');
+    const confirmUrl = `${origin}/auth/confirm`;
+
     let { data, error } = await adminSupabase.auth.admin.generateLink({
         type: 'magiclink',
         email,
-        options: { redirectTo: `${origin}/auth/callback` }
+        options: { redirectTo: confirmUrl }
     });
 
     // 1b. If user exists but is unverified, Supabase might calculate type='signup'.
@@ -122,7 +128,7 @@ export async function signUpWithMagicLink(email: string) {
         const retry = await adminSupabase.auth.admin.generateLink({
             type: 'magiclink',
             email,
-            options: { redirectTo: `${origin}/auth/callback` }
+            options: { redirectTo: confirmUrl }
         });
         if (retry.data) data = retry.data;
         if (retry.error) error = retry.error;
@@ -146,7 +152,7 @@ export async function signUpWithMagicLink(email: string) {
         const result = await adminSupabase.auth.admin.generateLink({
             type: 'magiclink',
             email,
-            options: { redirectTo: `${origin}/auth/callback` }
+            options: { redirectTo: confirmUrl }
         });
         data = result.data;
         error = result.error;
@@ -216,7 +222,7 @@ export async function signUpSeamless(formData: FormData, redirectTo: string) {
         email,
         password,
         options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || origin}/auth/confirm?next=${encodeURIComponent(redirectTo)}`,
             data: { full_name: fullName } // redundant but safe
         },
     });
