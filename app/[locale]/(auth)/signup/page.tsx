@@ -22,9 +22,6 @@ export default function SignupPage() {
     const callbackParams = new URLSearchParams();
     if (nextUrl) callbackParams.set('next', nextUrl);
     if (wardrobeToken) callbackParams.set('wardrobe_claim', wardrobeToken);
-    const callbackUrl = callbackParams.toString()
-        ? `${location.origin}/auth/callback?${callbackParams.toString()}`
-        : `${location.origin}/auth/callback`;
 
     useEffect(() => {
         if (token) {
@@ -57,6 +54,10 @@ export default function SignupPage() {
     };
 
     const handleGoogleSignup = async () => {
+        const callbackUrl = callbackParams.toString()
+            ? `${window.location.origin}/auth/callback?${callbackParams.toString()}`
+            : `${window.location.origin}/auth/callback`;
+
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
