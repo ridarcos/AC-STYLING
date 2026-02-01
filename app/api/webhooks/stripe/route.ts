@@ -52,6 +52,47 @@ export async function POST(req: Request) {
         const finalUserId = userId || session.metadata?.userId;
 
         console.log(`[Stripe Webhook] Session Info: SessionID=${session.id}, UserID=${finalUserId}`);
+
+        // Idempotency: Check if we already processed this session successfully
+        // We use the reference_id in admin_notifications or check our own log if needed.
+        // A simple check is to look for an existing 'completed' purchase with this session ID in metadata?
+        // Or better, check our webhook_events log if we log it with session_id.
+        // We logged it above, but we want to check if a PREVIOUS execution succeeded.
+
+        // Since we don't have a dedicated idempotency key column easily accessible without parsing json,
+        // we can check if a purchase exists for this session.
+        // But purchases don't store session_id directly in a column (maybe in metadata?).
+        // Let's check admin_notifications references.
+
+        /* 
+        const { data: existingNotification } = await supabase
+            .from('admin_notifications')
+            .select('id')
+            .eq('reference_id', session.id)
+            .single();
+
+        if (existingNotification) {
+             console.log(`[Stripe Webhook] Duplicate Session ${session.id} - Already processed.`);
+             return new Response('Already processed', { status: 200 });
+        }
+        */
+        // Actually, let's use the explicit check closer to the insert points, OR just rely on the fact that
+        // grants are idempotent (updates) but NOTIFICATIONS are inserts.
+
+        // We will check for existing notification with this reference_id
+        const { data: existingNotif } = await supabase
+            .from('admin_notifications')
+            .select('id')
+            .eq('reference_id', session.id)
+            .maybeSingle();
+
+        if (existingNotif) {
+            console.log(`[Stripe Webhook] Duplicate Session ${session.id} - Notification already exists.`);
+            // We continue to log specific line items just in case, or we implicitly return?
+            // If we return, we might skip purchases if they failed but notification succeeded? (Unlikely order)
+            // Use caution: only skip the notification insert if it exists.
+        }
+
         await logEvent('processing', `Started for User ${finalUserId || 'UNKNOWN'}`, {
             session_id: session.id,
             user_id: finalUserId,
@@ -181,30 +222,35 @@ export async function POST(req: Request) {
                         const notificationUserId = profileExists ? finalUserId : null;
                         const fallbackMessage = !profileExists ? ` (Profile Missing: ${finalUserId})` : "";
 
-                        const { error: notificationError } = await supabase.from('admin_notifications').insert({
-                            type: notificationType,
-                            title: `New Sale: ${productTitle}`,
-                            message: `${customerName} purchased ${productTitle}.${fallbackMessage}`,
-                            user_id: notificationUserId,
-                            reference_id: session.id,
-                            status: 'unread',
-                            metadata: {
-                                original_user_id: finalUserId,
-                                customerName,
-                                email: customerEmail,
-                                phone: customerPhone,
-                                amount: item.amount_total ? (item.amount_total / 100).toFixed(2) : '0.00',
-                                currency: item.currency?.toUpperCase() || 'USD',
-                                serviceTitle: productTitle,
-                                serviceImage: productImage
-                            }
-                        });
+                        // Prevent duplicates
+                        if (!existingNotif) {
+                            const { error: notificationError } = await supabase.from('admin_notifications').insert({
+                                type: notificationType,
+                                title: `New Sale: ${productTitle}`,
+                                message: `${customerName} purchased ${productTitle}.${fallbackMessage}`,
+                                user_id: notificationUserId,
+                                reference_id: session.id,
+                                status: 'unread',
+                                metadata: {
+                                    original_user_id: finalUserId,
+                                    customerName,
+                                    email: customerEmail,
+                                    phone: customerPhone,
+                                    amount: item.amount_total ? (item.amount_total / 100).toFixed(2) : '0.00',
+                                    currency: item.currency?.toUpperCase() || 'USD',
+                                    serviceTitle: productTitle,
+                                    serviceImage: productImage
+                                }
+                            });
 
-                        if (notificationError) {
-                            console.error('[Stripe Webhook] Notification Insert Error:', notificationError);
-                            await logEvent('error', `Admin Notification Failed: ${notificationError.message}`);
+                            if (notificationError) {
+                                console.error('[Stripe Webhook] Notification Insert Error:', notificationError);
+                                await logEvent('error', `Admin Notification Failed: ${notificationError.message}`);
+                            } else {
+                                await logEvent('notification', `Admin notification sent for ${productTitle}`);
+                            }
                         } else {
-                            await logEvent('notification', `Admin notification sent for ${productTitle}`);
+                            console.log(`[Stripe Webhook] Skipping duplicate notification for session ${session.id}`);
                         }
                     }
                 } catch (notifyErr) {

@@ -96,6 +96,7 @@ WITH CHECK (
 DROP POLICY IF EXISTS "Users can view own essence responses" ON public.essence_responses;
 DROP POLICY IF EXISTS "Users can update own essence responses" ON public.essence_responses;
 DROP POLICY IF EXISTS "Admins can view all essence responses" ON public.essence_responses;
+DROP POLICY IF EXISTS "Users can insert own essence responses" ON public.essence_responses;
 
 CREATE POLICY "Users can view own essence responses"
 ON public.essence_responses FOR SELECT
@@ -137,6 +138,8 @@ USING (
 -- 1.5 user_progress
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Users can view own progress." ON public.user_progress;
+DROP POLICY IF EXISTS "Users can view own progress" ON public.user_progress;
+DROP POLICY IF EXISTS "Users can insert own progress" ON public.user_progress;
 
 CREATE POLICY "Users can view own progress"
 ON public.user_progress FOR SELECT
@@ -157,6 +160,7 @@ WITH CHECK (
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Users can view own questions" ON public.user_questions;
 DROP POLICY IF EXISTS "Users can insert own questions" ON public.user_questions;
+DROP POLICY IF EXISTS "Admins can manage all questions" ON public.user_questions;
 
 CREATE POLICY "Users can view own questions"
 ON public.user_questions FOR SELECT
@@ -380,7 +384,9 @@ WITH CHECK (
 -- ============================================================================
 
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can delete any profile" ON public.profiles;
 

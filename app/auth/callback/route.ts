@@ -37,6 +37,9 @@ export async function GET(request: Request) {
 
                 if (pendingProfile && pendingProfile.id !== user.id) {
                     await supabase.from('profiles').update({ full_name: pendingProfile.full_name, is_guest: false, converted_at: new Date().toISOString() }).eq('id', user.id);
+                    // Transfer Wardrobe Ownership
+                    await supabase.from('wardrobes').update({ owner_id: user.id }).eq('owner_id', pendingProfile.id);
+                    // Transfer Items
                     await supabase.from('wardrobe_items').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
                     await supabase.from('tailor_cards').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
                     await supabase.from('lookbooks').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
