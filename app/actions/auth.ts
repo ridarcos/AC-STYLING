@@ -78,3 +78,38 @@ export async function requestPasswordReset(email: string) {
 
     return { success: true };
 }
+
+export async function signUpSeamless(formData: FormData, redirectTo: string) {
+    const supabase = await createClient();
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const fullName = formData.get('fullName') as string;
+
+    if (!email || !password || !fullName) {
+        return { error: 'Please fill in all fields.' };
+    }
+
+    const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                full_name: fullName,
+            },
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        },
+    });
+
+    if (error) {
+        console.error('Signup Error:', error);
+        return { error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function linkIntakeProfile(token: string) {
+    // Delegate to the robust activation logic in studio actions
+    const { activateStudioAccess } = await import('@/app/actions/studio');
+    return activateStudioAccess(token);
+}
