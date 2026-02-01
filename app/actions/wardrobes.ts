@@ -482,6 +482,17 @@ export async function assignWardrobe(
         console.error('Error updating profile status:', profileError);
     }
 
+    // 3. Transfer Items (Fix for "Pieces don't show")
+    // Ensure all items in this wardrobe belong to the new owner
+    const { error: itemsError } = await adminSupabase
+        .from('wardrobe_items')
+        .update({ user_id: userId })
+        .eq('wardrobe_id', wardrobeId);
+
+    if (itemsError) {
+        console.error('Error transferring items:', itemsError);
+    }
+
     revalidatePath('/vault/studio');
     return { success: true };
 }

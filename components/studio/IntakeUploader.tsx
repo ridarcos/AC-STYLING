@@ -15,6 +15,7 @@ interface FileEntry {
 }
 
 import { uploadGuestWardrobeItem } from "@/app/actions/studio";
+import { getMyWardrobe } from "@/app/actions/wardrobes";
 
 interface IntakeUploaderProps {
     token: string;
@@ -106,6 +107,10 @@ export default function IntakeUploader({ token, isGuest, locale, onUploadSuccess
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
                 if (userError || !user) throw new Error("Authentication failed");
 
+                // Ensure user has a wardrobe
+                const { success, wardrobe, error: wardrobeError } = await getMyWardrobe();
+                if (!success || !wardrobe) throw new Error(wardrobeError || "Failed to access wardrobe.");
+
                 for (let i = 0; i < files.length; i++) {
                     const entry = files[i];
                     if (entry.status === 'success') continue;
@@ -134,6 +139,7 @@ export default function IntakeUploader({ token, isGuest, locale, onUploadSuccess
                         .from('wardrobe_items')
                         .insert({
                             user_id: user.id,
+                            wardrobe_id: wardrobe.id,
                             image_url: publicUrl,
                             client_note: entry.note,
                             status: 'Keep'
