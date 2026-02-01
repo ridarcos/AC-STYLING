@@ -26,7 +26,11 @@ export async function GET(request: Request) {
             next = next || '/en/vault';
 
             // PROFILE LINKING LOGIC
-            const intakeToken = cookieStore.get('intake_token')?.value;
+            // Try cookie first, then URL param (more robust)
+            let intakeToken = cookieStore.get('intake_token')?.value;
+            if (!intakeToken) {
+                intakeToken = searchParams.get('intake_token') || undefined;
+            }
 
             if (intakeToken) {
                 // Use Admin Client to bypass RLS for profile linking and transfer
@@ -38,10 +42,16 @@ export async function GET(request: Request) {
                     .from('profiles')
                     .select('*')
                     .eq('intake_token', intakeToken)
-                    .single();
+                    .single(); // Use admin to find it even if RLS hides it
 
                 if (pendingProfile && pendingProfile.id !== user.id) {
-                    await adminSupabase.from('profiles').update({ full_name: pendingProfile.full_name, is_guest: false, converted_at: new Date().toISOString() }).eq('id', user.id);
+                    await adminSupabase.from('profiles').update({
+                        full_name: pendingProfile.full_name,
+                        is_guest: false,
+                        converted_at: new Date().toISOString(),
+                        active_studio_client: true, // Enable Studio Access
+                        studio_permissions: pendingProfile.studio_permissions || { lookbook: true, wardrobe: true }
+                    }).eq('id', user.id);
 
                     // Wardrobe Logic: Ensure user has a wardrobe and items are linked
                     let targetWardrobeId: string | null = null;

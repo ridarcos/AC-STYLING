@@ -121,10 +121,15 @@ function SignupForm({ onComplete, defaultName, token }: { onComplete: () => void
 
     const handleGoogleSignup = async () => {
         const next = window.location.pathname; // Should be /en/studio/intake/[token]
+        // Pass token in URL to ensure it survives the redirect (cookies can be flaky)
+        const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
+        redirectUrl.searchParams.set('next', next);
+        if (token) redirectUrl.searchParams.set('intake_token', token);
+
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+                redirectTo: redirectUrl.toString(),
                 queryParams: {
                     access_type: 'offline',
                     prompt: 'consent',
