@@ -17,9 +17,13 @@ export default function SignupPage() {
 
     const supabase = createClient();
 
-    // Build auth callback URL with next parameter
-    const callbackUrl = nextUrl
-        ? `${location.origin}/auth/callback?next=${encodeURIComponent(nextUrl)}`
+    // Build auth callback URL with next parameter AND wardrobe token for email flows
+    // (Cookie might not survive if user opens magic link in different browser)
+    const callbackParams = new URLSearchParams();
+    if (nextUrl) callbackParams.set('next', nextUrl);
+    if (wardrobeToken) callbackParams.set('wardrobe_claim', wardrobeToken);
+    const callbackUrl = callbackParams.toString()
+        ? `${location.origin}/auth/callback?${callbackParams.toString()}`
         : `${location.origin}/auth/callback`;
 
     useEffect(() => {

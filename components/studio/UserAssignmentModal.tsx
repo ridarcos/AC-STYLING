@@ -40,7 +40,8 @@ export default function UserAssignmentModal({ isOpen, onClose, wardrobeId, wardr
     }, [query]);
 
     const handleAssign = async (user: any) => {
-        if (!confirm(`Are you sure you want to assign "${wardrobeTitle}" to ${user.full_name}? This will enable Studio access for them.`)) {
+        const displayName = user.full_name || user.email;
+        if (!confirm(`Are you sure you want to assign "${wardrobeTitle}" to ${displayName}? This will enable Studio access for them.`)) {
             return;
         }
 
@@ -48,7 +49,7 @@ export default function UserAssignmentModal({ isOpen, onClose, wardrobeId, wardr
         const { success, error } = await assignWardrobe(wardrobeId, user.id);
 
         if (success) {
-            toast.success(`Wardrobe assigned to ${user.full_name}`);
+            toast.success(`Wardrobe assigned to ${displayName}`);
             onClose();
         } else {
             toast.error(error || "Assignment failed");
@@ -116,7 +117,7 @@ export default function UserAssignmentModal({ isOpen, onClose, wardrobeId, wardr
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-ac-taupe truncate">{user.full_name}</p>
+                                                <p className="text-sm font-medium text-ac-taupe truncate">{user.full_name || user.email}</p>
                                                 <p className="text-xs text-ac-taupe/40 truncate">{user.email}</p>
                                             </div>
                                             {assigning === user.id ? (

@@ -106,7 +106,7 @@ export default function WardrobeSwitcher({ onSelect, onAddWardrobe, selectedId }
                                     {wardrobe.title}
                                 </h4>
                                 <p className={`text-[9px] uppercase tracking-widest font-bold opacity-40 truncate`}>
-                                    {wardrobe.profiles?.full_name || 'Unassigned'}
+                                    {wardrobe.profiles?.full_name || wardrobe.profiles?.email || 'Unassigned'}
                                 </p>
                             </div>
                         </button>

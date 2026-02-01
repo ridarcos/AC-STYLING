@@ -248,7 +248,7 @@ export default function StudioDashboard({ locale }: StudioDashboardProps) {
                                                 {selectedWardrobe.title}
                                             </h2>
                                             <p className="text-xs uppercase tracking-widest text-ac-taupe/40 font-bold mt-1">
-                                                {selectedWardrobe.profiles?.full_name || 'Unassigned'}
+                                                {selectedWardrobe.profiles?.full_name || selectedWardrobe.profiles?.email || 'Unassigned'}
                                             </p>
                                         </div>
                                     </div>

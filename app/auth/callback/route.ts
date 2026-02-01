@@ -90,10 +90,16 @@ export async function GET(request: Request) {
                 }
             }
 
-            // WARDROBE CLAIM LOGIC
-            const wardrobeClaimToken = cookieStore.get('wardrobe_claim_token')?.value;
+            // WARDROBE CLAIM LOGIC - check cookie first, then URL param (for email magic links)
+            let wardrobeClaimToken = cookieStore.get('wardrobe_claim_token')?.value;
+            if (!wardrobeClaimToken) {
+                wardrobeClaimToken = searchParams.get('wardrobe_claim') || undefined;
+            }
+            console.log('[AuthCallback] Wardrobe claim token:', wardrobeClaimToken ? 'FOUND' : 'NOT FOUND');
             if (wardrobeClaimToken) {
-                await claimWardrobe(wardrobeClaimToken);
+                console.log('[AuthCallback] Attempting to claim wardrobe with token:', wardrobeClaimToken.substring(0, 8) + '...');
+                const claimResult = await claimWardrobe(wardrobeClaimToken);
+                console.log('[AuthCallback] Claim result:', claimResult);
                 cookieStore.delete('wardrobe_claim_token');
             }
 
