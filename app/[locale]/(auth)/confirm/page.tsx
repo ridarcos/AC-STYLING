@@ -57,10 +57,35 @@ export default function AuthConfirmPage() {
             }
         });
 
-        // 3. Status updates for better UX
+        // 3. MANUAL HASH RECOVERY
+        // If Supabase fails to pick up the hash (race condition), we do it manually.
+        if (typeof window !== 'undefined' && window.location.hash) {
+            console.log('[Confirm] Hash detected, attempting manual parse...');
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+                console.log('[Confirm] Tokens found in hash. Forcing session...');
+                supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                }).then(({ data, error }) => {
+                    if (error) {
+                        console.error('[Confirm] Manual session set failed:', error);
+                    } else if (data.session) {
+                        console.log('[Confirm] Manual session set success.');
+                        if (mounted) finalize(data.session.user.id);
+                    }
+                });
+            }
+        }
+
+        // 4. Status updates for better UX
         const timeout = setTimeout(() => {
             if (mounted) setStatus("Connecting to secure vault...");
-        }, 3000);
+        }, 5000);
 
         return () => {
             mounted = false;
