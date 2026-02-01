@@ -297,3 +297,92 @@ export async function uploadGuestWardrobeItem(formData: FormData, token: string)
         return { success: false, error: error.message || "Upload failed" };
     }
 }
+
+// =============================================================================
+// ACTIVATE STUDIO ACCESS (Authenticated Flow)
+// =============================================================================
+
+export async function activateStudioAccess(token: string) {
+    const { createClient } = await import("@/utils/supabase/server");
+    const { createAdminClient } = await import("@/utils/supabase/admin"); // Admin needed for profile lookup/transfer
+    const supabase = await createClient();
+
+    // 1. Auth Check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
+
+    const adminSupabase = createAdminClient();
+
+    // 2. Validate Token (Find the Guest Profile associated with this invite)
+    const { data: inviteProfile, error: profileError } = await adminSupabase
+        .from('profiles')
+        .select('*')
+        .eq('intake_token', token)
+        .single();
+
+    if (profileError || !inviteProfile) {
+        // Fallback: Check if this user ALREADY successfully claimed it?
+        const { data: currentUser } = await adminSupabase.from('profiles').select('intake_token, active_studio_client').eq('id', user.id).single();
+        if (currentUser?.intake_token === token && currentUser?.active_studio_client) {
+            return { success: true };
+        }
+        return { success: false, error: "Invalid or expired intake link." };
+    }
+
+    // Prevent self-clobbering 
+    if (inviteProfile.id === user.id) {
+        await adminSupabase.from('profiles').update({ active_studio_client: true }).eq('id', user.id);
+        return { success: true };
+    }
+
+    // 3. Grant Access to Current User
+    const { error: updateError } = await adminSupabase
+        .from('profiles')
+        .update({
+            active_studio_client: true, // UNLOCK STUDIO
+            studio_permissions: inviteProfile.studio_permissions || { lookbook: true, wardrobe: true },
+            intake_token: token // Link token to real user for record
+        })
+        .eq('id', user.id);
+
+    if (updateError) {
+        console.error("Activate Studio Error:", updateError);
+        return { success: false, error: "Failed to activate studio access." };
+    }
+
+    // 4. Ensure Wardrobe Exists
+    const { data: existingWardrobe } = await adminSupabase
+        .from('wardrobes')
+        .select('id')
+        .eq('owner_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+    let wardrobeId = existingWardrobe?.id;
+
+    if (!wardrobeId) {
+        // Create it
+        const { data: newWardrobe } = await adminSupabase
+            .from('wardrobes')
+            .insert({
+                owner_id: user.id,
+                title: 'My Wardrobe',
+                status: 'active'
+            })
+            .select('id')
+            .single();
+        wardrobeId = newWardrobe?.id;
+    }
+
+    // 5. Cleanup Invite Profile & Transfer any legacy items (Safety Net)
+    if (inviteProfile.id !== user.id) {
+        if (wardrobeId) {
+            await adminSupabase.from('wardrobe_items').update({ user_id: user.id, wardrobe_id: wardrobeId }).eq('user_id', inviteProfile.id);
+        }
+        await adminSupabase.from('tailor_cards').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
+        await adminSupabase.from('lookbooks').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
+        await adminSupabase.from('profiles').delete().eq('id', inviteProfile.id);
+    }
+
+    return { success: true };
+}
