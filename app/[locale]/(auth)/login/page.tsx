@@ -8,7 +8,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function LoginPage() {
+    const [loginMethod, setLoginMethod] = useState<'magic' | 'password'>('magic');
     const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [guestLoading, setGuestLoading] = useState(false);
 
@@ -52,21 +54,35 @@ export default function LoginPage() {
         setMessage(null);
         setIsSuccess(false);
 
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: callbackUrl,
-            },
-        });
+        if (loginMethod === 'magic') {
+            // Import and use Server Action for Branded Magic Link
+            const { signInWithMagicLink } = await import('@/app/actions/auth');
+            const result = await signInWithMagicLink(email);
 
-        if (error) {
-            setMessage(error.message);
-            toast.error(error.message);
+            if (result.error) {
+                setMessage(result.error);
+                toast.error(result.error);
+            } else {
+                setIsSuccess(true);
+                setMessage("Check your email for the magic link!");
+                toast.success("Magic link sent!");
+            }
         } else {
-            setIsSuccess(true);
-            setMessage("Check your email for the magic link!");
-            toast.success("Magic link sent!");
+            // Password Login
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) {
+                setMessage(error.message);
+                toast.error(error.message);
+            } else {
+                toast.success("Welcome back!");
+                router.push(nextUrl || '/vault');
+            }
         }
+
         setIsLoading(false);
     };
 
@@ -162,6 +178,26 @@ export default function LoginPage() {
                     </div>
 
                     <div className="space-y-6">
+                        {/* Toggle Login Method */}
+                        <div className="flex bg-[#3D3630]/5 p-1 rounded-sm">
+                            <button
+                                type="button"
+                                onClick={() => setLoginMethod('magic')}
+                                className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-sm transition-all ${loginMethod === 'magic' ? 'bg-[#3D3630] text-[#E6DED6] shadow-sm' : 'text-[#3D3630]/60 hover:text-[#3D3630]'
+                                    }`}
+                            >
+                                Magic Link
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLoginMethod('password')}
+                                className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-sm transition-all ${loginMethod === 'password' ? 'bg-[#3D3630] text-[#E6DED6] shadow-sm' : 'text-[#3D3630]/60 hover:text-[#3D3630]'
+                                    }`}
+                            >
+                                Password
+                            </button>
+                        </div>
+
                         {/* Email Login Form */}
                         <form onSubmit={handleEmailLogin} className="space-y-5">
                             <div className="space-y-2">
@@ -181,6 +217,31 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
+                            {/* Password Field */}
+                            {loginMethod === 'password' && (
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <label htmlFor="password" className="block text-[10px] font-bold uppercase tracking-widest text-[#3D3630]/40">
+                                            Password
+                                        </label>
+                                        <a href="/forgot-password" className="text-[10px] text-[#3D3630]/60 hover:text-[#3D3630] underline uppercase tracking-widest">
+                                            Forgot?
+                                        </a>
+                                    </div>
+                                    <div className="relative group">
+                                        <input
+                                            id="password"
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            placeholder="••••••••"
+                                            className="w-full bg-white/50 border border-[#3D3630]/10 rounded-sm px-4 py-4 text-[#3D3630] placeholder:text-[#3D3630]/20 focus:outline-none focus:border-[#D4AF37] focus:bg-white transition-all font-serif"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -190,8 +251,8 @@ export default function LoginPage() {
                                     <Loader2 className="animate-spin" size={16} />
                                 ) : (
                                     <>
-                                        <span>Continue with Email</span>
-                                        <Mail size={16} className="opacity-60" />
+                                        <span>{loginMethod === 'magic' ? 'Send Login Link' : 'Sign In'}</span>
+                                        {loginMethod === 'magic' ? <Mail size={16} className="opacity-60" /> : <ChevronRight size={16} className="opacity-60" />}
                                     </>
                                 )}
                             </button>

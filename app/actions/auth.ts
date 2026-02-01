@@ -1,120 +1,79 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
+import { sendEmail } from '@/lib/resend';
+import { getMagicLinkHtml, getPasswordResetHtml } from '@/lib/email-templates';
 import { headers } from 'next/headers';
 
-export async function signUpSeamless(formData: FormData, redirectPath: string = '/vault', token?: string) {
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const fullName = formData.get('fullName') as string;
-
+export async function signInWithMagicLink(email: string) {
     const supabase = await createClient();
+    const origin = (await headers()).get('origin');
 
-    // 1. Sign Up
-    const { data, error } = await supabase.auth.signUp({
+    // 1. Generate Link
+    const { data, error } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
         email,
-        password,
         options: {
-            data: {
-                full_name: fullName,
-            },
+            redirectTo: `${origin}/auth/callback`,
         },
     });
 
     if (error) {
-        return { error: error.message };
+        console.error('Error generating magic link:', error);
+        return { error: 'Could not generate login link. Please try again.' };
     }
 
-    if (data.session) {
-        // Success - Link Token if provided
-        if (token) {
-            await linkIntakeProfile(token);
+    const { properties } = data;
+
+    // 2. Send Email
+    if (properties?.action_link) {
+        const { success, error: emailError } = await sendEmail({
+            to: email,
+            subject: 'Sign in to AC Styling',
+            html: getMagicLinkHtml(properties.action_link),
+        });
+
+        if (!success) {
+            console.error('Error sending magic link email:', emailError);
+            return { error: 'Failed to send email. Please try again.' };
         }
-        redirect(redirectPath);
-    } else if (data.user && !data.session) {
-        return { error: "Please verify your email to continue." };
     }
 
-    return { error: "Unknown error occurred." };
+    return { success: true };
 }
 
-// ... convertGuestAccount ...
-
-export async function linkIntakeProfile(token: string) {
+export async function requestPasswordReset(email: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const origin = (await headers()).get('origin');
 
-    if (!user) return { error: "Not authenticated" };
+    // 1. Generate Link
+    const { data, error } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: {
+            redirectTo: `${origin}/auth/callback?next=/update-password`,
+        },
+    });
 
-    // Use Admin Client for Transfer (Bypass RLS)
-    const { createAdminClient } = await import("@/utils/supabase/admin");
-    const adminSupabase = createAdminClient();
-
-    // 1. Find the "Invite Profile"
-    const { data: inviteProfile, error: inviteError } = await adminSupabase
-        .from('profiles')
-        .select('*')
-        .eq('intake_token', token)
-        .neq('id', user.id)
-        .single(); // Use admin to find it even if RLS hides it
-
-    if (!inviteProfile) {
-        return { message: "Token already processed or invalid." };
+    if (error) {
+        console.error('Error generating recovery link:', error);
+        return { error: 'Could not generate reset link. Please try again.' };
     }
 
-    // 2. Wardrobe Logic: Ensure user has a wardrobe and items are linked
-    let targetWardrobeId: string | null = null;
+    const { properties } = data;
 
-    // Check if guest already has a wardrobe
-    const { data: guestWardrobe } = await adminSupabase.from('wardrobes').select('id').eq('owner_id', inviteProfile.id).maybeSingle();
+    // 2. Send Email
+    if (properties?.action_link) {
+        const { success, error: emailError } = await sendEmail({
+            to: email,
+            subject: 'Reset your AC Styling Password',
+            html: getPasswordResetHtml(properties.action_link),
+        });
 
-    if (guestWardrobe) {
-        // Transfer existing wardrobe
-        await adminSupabase.from('wardrobes').update({ owner_id: user.id }).eq('id', guestWardrobe.id);
-        targetWardrobeId = guestWardrobe.id;
-    } else {
-        // Create new wardrobe if none exists
-        const { data: newWardrobe } = await adminSupabase.from('wardrobes').insert({
-            owner_id: user.id,
-            title: `${inviteProfile.full_name || 'My'} Wardrobe`,
-            status: 'active'
-        }).select('id').single();
-        if (newWardrobe) targetWardrobeId = newWardrobe.id;
-    }
-
-    // 3. Transfer Data & Link to Wardrobe
-    if (targetWardrobeId) {
-        await adminSupabase.from('wardrobe_items')
-            .update({ user_id: user.id, wardrobe_id: targetWardrobeId })
-            .eq('user_id', inviteProfile.id);
-    } else {
-        await adminSupabase.from('wardrobe_items').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
-    }
-
-    await adminSupabase.from('tailor_cards').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
-    await adminSupabase.from('lookbooks').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
-
-    // 4. Update Current Profile Permissions
-    await adminSupabase
-        .from('profiles')
-        .update({
-            active_studio_client: true,
-            studio_permissions: inviteProfile.studio_permissions || { lookbook: true, wardrobe: true },
-            intake_token: token
-        })
-        .eq('id', user.id);
-
-    // 5. Delete the Invite Profile (Cleanup)
-    const { error: deleteError } = await adminSupabase
-        .from('profiles')
-        .delete()
-        .eq('id', inviteProfile.id);
-
-    if (deleteError) {
-        console.error("Cleanup Error:", deleteError);
-        // Fallback: Archive it if delete fails
-        await adminSupabase.from('profiles').update({ status: 'archived' }).eq('id', inviteProfile.id);
+        if (!success) {
+            console.error('Error sending reset email:', emailError);
+            return { error: 'Failed to send email. Please try again.' };
+        }
     }
 
     return { success: true };
