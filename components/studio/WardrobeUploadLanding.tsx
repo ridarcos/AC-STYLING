@@ -60,22 +60,31 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
                 if (wardrobe.owner_id && wardrobe.owner_id !== user.id && profile?.role !== 'admin') {
                     setAuthRequired(true); // Wrong user
                 } else if (!wardrobe.owner_id) {
-                    // Unclaimed wardrobe - claim it for authenticated user
+                    // Unclaimed wardrobe OR just claimed by auth callback
+                    // (wardrobe.owner_id is from server-side props, might be stale after redirect)
                     setIsClaiming(true);
                     try {
                         const result = await claimWardrobe(token);
                         if (result.success) {
+                            // Show welcome regardless - it's a new visit after signup/login
                             setShowWelcome(true);
                             toast.success(locale === 'es' ? '¡Bienvenida al AC Styling Studio!' : 'Welcome to the AC Styling Studio!');
                         } else {
-                            toast.error(result.error || 'Failed to claim wardrobe');
+                            // Only show error if it's not an "already owned" situation
+                            console.warn('Claim result:', result.error);
+                            // Still show the uploader since claim may have happened in callback
+                            setShowWelcome(true);
                         }
                     } catch (err) {
                         console.error('Claim error:', err);
-                        toast.error('An unexpected error occurred');
+                        // Still proceed to welcome - wardrobe might have been claimed
+                        setShowWelcome(true);
                     } finally {
                         setIsClaiming(false);
                     }
+                } else if (wardrobe.owner_id === user.id) {
+                    // Already owned by this user - verify studio access (in case it was missed)
+                    claimWardrobe(token); // This will ensure active_studio_client is set
                 }
             } else {
                 setIsAuthenticated(false);

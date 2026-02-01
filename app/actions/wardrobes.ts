@@ -508,18 +508,17 @@ export async function claimWardrobe(token: string): Promise<{ success: boolean; 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: "You must be logged in to claim a wardrobe." };
 
-    // 1. Find Wardrobe by Upload Token (using Admin client to bypass RLS for lookup if needed, 
-    //    though "Upload token access" policy should allow SELECT via anon/authenticated)
-    //    Actually, RLS policy "Upload token access" allows SELECT if upload_token IS NOT NULL.
-    //    So we can use the regular client.
+    const adminSupabase = createAdminClient();
 
-    const { data: wardrobe, error: findError } = await supabase
+    // 1. Find Wardrobe by Upload Token (MUST use admin client - RLS policy was dropped)
+    const { data: wardrobe, error: findError } = await adminSupabase
         .from('wardrobes')
         .select('id, owner_id')
         .eq('upload_token', token)
         .single();
 
     if (findError || !wardrobe) {
+        console.error('[claimWardrobe] Token lookup failed:', findError?.message || 'No wardrobe found');
         return { success: false, error: "Invalid or expired claim token." };
     }
 
@@ -529,10 +528,13 @@ export async function claimWardrobe(token: string): Promise<{ success: boolean; 
     }
 
     if (wardrobe.owner_id === user.id) {
-        return { success: true, wardrobeId: wardrobe.id }; // Already owned by self, assume success
+        // Already owned by self - still ensure studio access is enabled
+        await adminSupabase
+            .from('profiles')
+            .update({ active_studio_client: true })
+            .eq('id', user.id);
+        return { success: true, wardrobeId: wardrobe.id };
     }
-
-    const adminSupabase = createAdminClient();
 
     // 3. Claim it (Update Owner)
     const { error: updateError } = await adminSupabase
@@ -541,15 +543,22 @@ export async function claimWardrobe(token: string): Promise<{ success: boolean; 
         .eq('id', wardrobe.id);
 
     if (updateError) {
+        console.error('[claimWardrobe] Update failed:', updateError.message);
         return { success: false, error: updateError.message };
     }
 
     // 4. Enable Studio Access for the claiming user
-    await adminSupabase
+    const { error: profileError } = await adminSupabase
         .from('profiles')
         .update({ active_studio_client: true })
         .eq('id', user.id);
 
+    if (profileError) {
+        console.error('[claimWardrobe] Profile update failed:', profileError.message);
+        // Don't fail the whole operation, wardrobe was claimed successfully
+    }
+
+    console.log('[claimWardrobe] Success - User:', user.id, 'Wardrobe:', wardrobe.id);
     revalidatePath('/vault');
     return { success: true, wardrobeId: wardrobe.id };
 }
