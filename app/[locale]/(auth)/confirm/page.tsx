@@ -19,60 +19,54 @@ export default function AuthConfirmPage() {
         const supabase = createClient();
         let mounted = true;
 
-        const handleAuth = async () => {
-            // 1. Wait for Supabase to detect session (handles Hash or Code automatically)
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (session) {
-                if (!mounted) return;
-                setStatus("Finalizing your account...");
-
-                // 2. Run Server-Side Onboarding (Profile Linking / Wardrobe Claim)
-                try {
-                    const result = await processOnboarding();
-                    if (result.success) {
-                        toast.success("Welcome to the Studio!");
-                    } else {
-                        // Non-blocking error
-                        console.error("Onboarding warning:", result.error);
-                    }
-                } catch (err) {
-                    console.error("Onboarding failed:", err);
+        const finalize = async (userId: string) => {
+            console.log('[Confirm] Finalizing onboarding for:', userId);
+            setStatus("Finalizing your account...");
+            try {
+                const result = await processOnboarding();
+                if (result.success) {
+                    toast.success("Welcome to the Studio!");
+                } else {
+                    console.error("Onboarding warning:", result.error);
                 }
-
-                // 3. Redirect
-                const target = nextUrl || '/vault';
-                router.replace(target); // Use replace to prevent back-button loop
-            } else {
-                // If no session found immediately, listen for event (Hash might take a ms to parse)
-                const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                    if (event === 'SIGNED_IN' && session) {
-                        if (!mounted) return;
-                        setStatus("Finalizing your account...");
-                        await processOnboarding();
-                        const target = nextUrl || '/vault';
-                        router.replace(target);
-                    } else if (event === 'SIGNED_OUT') {
-                        // Do nothing, wait.
-                    }
-                });
-
-                // Fallback timeout? 
-                setTimeout(() => {
-                    if (mounted && !session) {
-                        // Check hash one last time manually? 
-                        // If still nothing, maybe redirect to login?
-                        // For now let's just wait, or user can click 'Login' manually if stuck.
-                    }
-                }, 5000);
-
-                return () => subscription.unsubscribe();
+            } catch (err) {
+                console.error("Onboarding failed:", err);
             }
+
+            const target = nextUrl || '/vault';
+            console.log('[Confirm] Redirecting to:', target);
+            router.replace(target);
         };
 
-        handleAuth();
+        // 1. Check if session exists immediately
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            console.log('[Confirm] Initial session check:', session ? 'Found' : 'None');
+            if (session && mounted) {
+                finalize(session.user.id);
+            }
+        });
 
-        return () => { mounted = false; };
+        // 2. Listen for Auth Changes (Hash -> Session)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('[Confirm] Auth change:', event);
+            if (event === 'SIGNED_IN' && session && mounted) {
+                // Check if we haven't already started finalizing?
+                // Actually finalize handles its own logic, but we might want to prevent double-call.
+                // For now, it's safe (idempotent-ish).
+                finalize(session.user.id);
+            }
+        });
+
+        // 3. Status updates for better UX
+        const timeout = setTimeout(() => {
+            if (mounted) setStatus("Connecting to secure vault...");
+        }, 3000);
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+            clearTimeout(timeout);
+        };
     }, [nextUrl, router]);
 
     return (
