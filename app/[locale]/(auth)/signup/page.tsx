@@ -22,6 +22,7 @@ export default function SignupPage() {
     const callbackParams = new URLSearchParams();
     if (nextUrl) callbackParams.set('next', nextUrl);
     if (wardrobeToken) callbackParams.set('wardrobe_claim', wardrobeToken);
+    if (token) callbackParams.set('intake_token', token);
 
     useEffect(() => {
         if (token) {

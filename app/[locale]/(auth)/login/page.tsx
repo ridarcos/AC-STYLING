@@ -32,6 +32,7 @@ export default function LoginPage() {
     const callbackParams = new URLSearchParams();
     if (nextUrl) callbackParams.set('next', nextUrl);
     if (wardrobeToken) callbackParams.set('wardrobe_claim', wardrobeToken);
+    if (token) callbackParams.set('intake_token', token);
 
     useEffect(() => {
         // 1. Setup Auth Listener for Implicit Flow (Hash) Support
@@ -111,8 +112,9 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         // Construct callback URL dynamically on the client
-        const callbackUrl = nextUrl
-            ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextUrl)}`
+        // Construct callback URL dynamically with all params (next, wardrobe)
+        const callbackUrl = callbackParams.toString()
+            ? `${window.location.origin}/auth/callback?${callbackParams.toString()}`
             : `${window.location.origin}/auth/callback`;
 
         const { error } = await supabase.auth.signInWithOAuth({

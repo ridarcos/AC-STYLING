@@ -35,6 +35,8 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                         setIsAuthorized(true);
                         toast.success("Studio Access Unlocked");
                     } else {
+                        // If token is invalid or claimed by another, we might need a specific error UI
+                        // But for now, just toast error.
                         toast.error(result.error || "Failed to activate studio access.");
                     }
                 }
@@ -54,8 +56,9 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
     // Handler for Login Navigation
     const handleLoginRedirect = (mode: 'login' | 'signup') => {
         // Enforce returning to this page after auth
-        const next = encodeURIComponent(window.location.pathname); // e.g. /en/studio/intake/xyz
-        router.push(`/${locale}/${mode}?next=${next}`);
+        // We pass 'wardrobe' AND 'token' params. 'wardrobe' triggers claim, 'token' triggers profile migration.
+        const next = encodeURIComponent(window.location.pathname);
+        router.push(`/${locale}/${mode}?token=${token}&wardrobe=${token}&next=${next}`);
     };
 
     return (
@@ -77,10 +80,10 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                     </motion.div>
                 )}
 
-                {/* STATE: GUEST (Login Required) */}
+                {/* STATE: UNAUTHENTICATED (Require Login/Signup) */}
                 {!user && !isChecking && (
                     <motion.div
-                        key="guest"
+                        key="portal"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
@@ -94,22 +97,22 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                             Welcome, {clientName}.
                         </h1>
                         <p className="font-sans text-ac-taupe/70 mb-8 max-w-sm mx-auto text-sm leading-relaxed">
-                            To ensure the security of your wardrobe and access your private studio vault, please sign in or create an account to begin.
+                            To ensure the security of your wardrobe and access your private studio vault, please create an account or sign in to begin.
                         </p>
 
                         <div className="space-y-3 max-w-xs mx-auto">
                             <button
                                 onClick={() => handleLoginRedirect('signup')}
-                                className="w-full bg-ac-taupe text-white py-3.5 rounded-sm hover:bg-ac-taupe/90 transition-all uppercase tracking-widest text-xs font-bold flex justify-center gap-2 items-center"
+                                className="w-full bg-ac-taupe text-white py-3.5 rounded-sm hover:bg-ac-taupe/90 transition-all uppercase tracking-widest text-xs font-bold flex justify-center gap-2 items-center shadow-lg"
                             >
-                                <span>Create Account</span>
+                                <span>Join the Studio</span>
                                 <ArrowRight size={14} />
                             </button>
                             <button
                                 onClick={() => handleLoginRedirect('login')}
                                 className="w-full bg-white/50 text-ac-taupe border border-ac-taupe/20 py-3.5 rounded-sm hover:bg-white hover:border-ac-taupe/40 transition-all uppercase tracking-widest text-xs font-bold"
                             >
-                                Log In
+                                Member Login
                             </button>
                         </div>
 
@@ -138,18 +141,18 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                         </div>
 
                         <IntakeUploader
-                            token={token} // Still pass token if uploader needs it for context, though logic now uses USER
+                            token={token}
                             isGuest={false}
                             locale={locale}
                             onUploadSuccess={() => {
                                 toast.success("Assets Received. Redirecting to Vault...");
-                                router.push(`/${locale}/vault`); // Redirect to Vault
+                                router.push(`/${locale}/vault`);
                             }}
                         />
                     </motion.div>
                 )}
 
-                {/* STATE: UNAUTHORIZED (Error?) */}
+                {/* STATE: UNAUTHORIZED / ERROR (Token Failed/Expired) */}
                 {user && !isAuthorized && !isChecking && (
                     <motion.div
                         key="error"
@@ -157,15 +160,15 @@ export default function IntakeLanding({ token, clientName, locale, user }: Intak
                         animate={{ opacity: 1 }}
                         className="bg-white/30 p-10 rounded-sm text-center border border-red-200/50"
                     >
-                        <p className="text-red-500 font-bold mb-4">Access Denied</p>
+                        <p className="text-red-500 font-bold mb-4">Access Issue</p>
                         <p className="text-sm text-ac-taupe/70 mb-6">
-                            This invitation link may be expired or invalid.
+                            We couldn't activate access with this link. It may be expired or already claimed.
                         </p>
                         <button
                             onClick={() => window.location.reload()}
-                            className="text-xs uppercase font-bold underline text-ac-taupe"
+                            className="bg-ac-taupe text-white px-6 py-2 rounded-sm text-xs uppercase font-bold tracking-widest"
                         >
-                            Retry Validation
+                            Retry
                         </button>
                     </motion.div>
                 )}
