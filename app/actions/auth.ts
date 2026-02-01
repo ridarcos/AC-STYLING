@@ -47,42 +47,66 @@ export async function linkIntakeProfile(token: string) {
 
     if (!user) return { error: "Not authenticated" };
 
+    // Use Admin Client for Transfer (Bypass RLS)
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const adminSupabase = createAdminClient();
+
     // 1. Find the "Invite Profile"
-    const { data: inviteProfile, error: inviteError } = await supabase
+    const { data: inviteProfile, error: inviteError } = await adminSupabase
         .from('profiles')
         .select('*')
         .eq('intake_token', token)
         .neq('id', user.id)
-        .single();
+        .single(); // Use admin to find it even if RLS hides it
 
     if (!inviteProfile) {
         return { message: "Token already processed or invalid." };
     }
 
-    // 2. Transfer Data (Wardrobe, Tailor Cards, Lookbooks)
-    // Update IDs to the new user
-    await supabase.from('wardrobe_items').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
-    await supabase.from('tailor_cards').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
-    await supabase.from('lookbooks').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
+    // 2. Wardrobe Logic: Ensure user has a wardrobe and items are linked
+    let targetWardrobeId: string | null = null;
 
-    // 3. Update Current Profile Permissions (if the invite had special ones)
-    // We merge them rather than overwrite blindly? 
-    // Usually invites grant Studio Access.
-    await supabase
+    // Check if guest already has a wardrobe
+    const { data: guestWardrobe } = await adminSupabase.from('wardrobes').select('id').eq('owner_id', inviteProfile.id).maybeSingle();
+
+    if (guestWardrobe) {
+        // Transfer existing wardrobe
+        await adminSupabase.from('wardrobes').update({ owner_id: user.id }).eq('id', guestWardrobe.id);
+        targetWardrobeId = guestWardrobe.id;
+    } else {
+        // Create new wardrobe if none exists
+        const { data: newWardrobe } = await adminSupabase.from('wardrobes').insert({
+            owner_id: user.id,
+            title: `${inviteProfile.full_name || 'My'} Wardrobe`,
+            status: 'active'
+        }).select('id').single();
+        if (newWardrobe) targetWardrobeId = newWardrobe.id;
+    }
+
+    // 3. Transfer Data & Link to Wardrobe
+    if (targetWardrobeId) {
+        await adminSupabase.from('wardrobe_items')
+            .update({ user_id: user.id, wardrobe_id: targetWardrobeId })
+            .eq('user_id', inviteProfile.id);
+    } else {
+        await adminSupabase.from('wardrobe_items').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
+    }
+
+    await adminSupabase.from('tailor_cards').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
+    await adminSupabase.from('lookbooks').update({ user_id: user.id }).eq('user_id', inviteProfile.id);
+
+    // 4. Update Current Profile Permissions
+    await adminSupabase
         .from('profiles')
         .update({
-            // active_studio_client: true, // Only if invite implies it? Yes.
-            // studio_permissions: inviteProfile.studio_permissions,
-            // Actually, handle_new_purchase sets this. 
-            // But invites are usually for Studio Clients.
-            active_studio_client: true, // Force enable studio for invited users
+            active_studio_client: true,
             studio_permissions: inviteProfile.studio_permissions || { lookbook: true, wardrobe: true },
             intake_token: token
         })
         .eq('id', user.id);
 
-    // 4. Delete the Invite Profile (Cleanup)
-    const { error: deleteError } = await supabase
+    // 5. Delete the Invite Profile (Cleanup)
+    const { error: deleteError } = await adminSupabase
         .from('profiles')
         .delete()
         .eq('id', inviteProfile.id);
@@ -90,7 +114,7 @@ export async function linkIntakeProfile(token: string) {
     if (deleteError) {
         console.error("Cleanup Error:", deleteError);
         // Fallback: Archive it if delete fails
-        await supabase.from('profiles').update({ status: 'archived' }).eq('id', inviteProfile.id);
+        await adminSupabase.from('profiles').update({ status: 'archived' }).eq('id', inviteProfile.id);
     }
 
     return { success: true };

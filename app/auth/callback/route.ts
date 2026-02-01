@@ -42,10 +42,37 @@ export async function GET(request: Request) {
 
                 if (pendingProfile && pendingProfile.id !== user.id) {
                     await adminSupabase.from('profiles').update({ full_name: pendingProfile.full_name, is_guest: false, converted_at: new Date().toISOString() }).eq('id', user.id);
-                    // Transfer Wardrobe Ownership
-                    await adminSupabase.from('wardrobes').update({ owner_id: user.id }).eq('owner_id', pendingProfile.id);
-                    // Transfer Items
-                    await adminSupabase.from('wardrobe_items').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
+
+                    // Wardrobe Logic: Ensure user has a wardrobe and items are linked
+                    let targetWardrobeId: string | null = null;
+
+                    // 1. Check if guest already has a wardrobe
+                    const { data: guestWardrobe } = await adminSupabase.from('wardrobes').select('id').eq('owner_id', pendingProfile.id).maybeSingle();
+                    if (guestWardrobe) {
+                        await adminSupabase.from('wardrobes').update({ owner_id: user.id }).eq('id', guestWardrobe.id);
+                        targetWardrobeId = guestWardrobe.id;
+                    } else {
+                        // 2. Create new wardrobe if none exists
+                        const { data: newWardrobe } = await adminSupabase.from('wardrobes').insert({
+                            owner_id: user.id,
+                            title: `${pendingProfile.full_name || 'My'} Wardrobe`,
+                            status: 'active'
+                        }).select('id').single();
+                        if (newWardrobe) targetWardrobeId = newWardrobe.id;
+                    }
+
+                    // 3. Transfer Items & Link to Wardrobe
+                    if (targetWardrobeId) {
+                        // Update items to belong to new user AND new wardrobe (if missing)
+                        await adminSupabase.from('wardrobe_items')
+                            .update({ user_id: user.id, wardrobe_id: targetWardrobeId })
+                            .eq('user_id', pendingProfile.id);
+                    } else {
+                        // Fallback just transfer ownership (shouldn't happen if insert succeeds)
+                        await adminSupabase.from('wardrobe_items').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
+                    }
+
+                    // Transfer other assets
                     await adminSupabase.from('tailor_cards').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
                     await adminSupabase.from('lookbooks').update({ user_id: user.id }).eq('user_id', pendingProfile.id);
                     await adminSupabase.from('profiles').delete().eq('id', pendingProfile.id);
