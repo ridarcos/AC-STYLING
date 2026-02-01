@@ -108,12 +108,33 @@ export async function signUpWithMagicLink(email: string) {
         options: { redirectTo: `${origin}/auth/callback` }
     });
 
+    // 1b. If user exists but is unverified, Supabase might calculate type='signup'.
+    // We want to force 'magiclink' for a smoother login experience (since we are verifying via email).
+    if (data?.user && !data.user.email_confirmed_at) {
+        console.log('User exists but is unverified. Auto-verifying and regenerating link...');
+        // Confirm the user
+        await adminSupabase.auth.admin.updateUserById(data.user.id, {
+            email_confirm: true,
+            user_metadata: { ...data.user.user_metadata, email_verified: true }
+        });
+
+        // Regenerate link as proper magiclink
+        const retry = await adminSupabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email,
+            options: { redirectTo: `${origin}/auth/callback` }
+        });
+        if (retry.data) data = retry.data;
+        if (retry.error) error = retry.error;
+    }
+
     // 2. If User Not Found, Create User First
     if (error && error.message.includes("User not found")) {
         console.log('User not found. Creating new user...');
         const { error: createError } = await adminSupabase.auth.admin.createUser({
             email,
             email_confirm: true,
+            user_metadata: { email_verified: true }
         });
 
         if (createError) {
