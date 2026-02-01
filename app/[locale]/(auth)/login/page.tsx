@@ -34,6 +34,20 @@ export default function LoginPage() {
         : `${location.origin}/auth/callback`;
 
     useEffect(() => {
+        // 1. Setup Auth Listener for Implicit Flow (Hash) Support
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                // Determine redirect path
+                const target = nextUrl || '/vault';
+                // Avoid double-toast if we dealt with it in handle functions
+                if (!isLoading) {
+                    toast.success("Successfully signed in.");
+                    router.push(target);
+                }
+            }
+        });
+
+        // 2. Handle Feedback Params
         if (token) {
             document.cookie = `intake_token=${token}; path=/; max-age=3600; SameSite=Lax`;
         }
@@ -43,10 +57,19 @@ export default function LoginPage() {
         if (nextUrl) {
             document.cookie = `auth_next_url=${nextUrl}; path=/; max-age=3600; SameSite=Lax`;
         }
+
+        // Only show error if NO hash exists (because hash means successful implicit login is pending)
         if (errorMsg) {
-            toast.error(errorDetails ? `Login Failed: ${errorDetails}` : "Authentication failed. Please try again.");
+            const hasHash = typeof window !== 'undefined' && window.location.hash.includes('access_token');
+            if (!hasHash) {
+                toast.error(errorDetails ? `Login Failed: ${errorDetails}` : "Authentication failed. Please try again.");
+            }
         }
-    }, [token, wardrobeToken, nextUrl, errorMsg, errorDetails]);
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [token, wardrobeToken, nextUrl, errorMsg, errorDetails, supabase, router, isLoading]);
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
