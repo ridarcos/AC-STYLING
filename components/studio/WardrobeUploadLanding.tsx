@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Check, Loader2, Camera, Sparkles, X, LogIn, ChevronRight, ImagePlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { getSignedUploadUrl, createWardrobeItem } from "@/app/actions/wardrobes";
+import { getSignedUploadUrl, createWardrobeItem, claimWardrobe } from "@/app/actions/wardrobes";
 import type { Wardrobe } from "@/app/actions/wardrobes";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -37,8 +37,9 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
     const [uploadedCount, setUploadedCount] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
 
-    // Thank you modal
-    const [showThankYou, setShowThankYou] = useState(false);
+    // Welcome screen (shown after claiming wardrobe)
+    const [showWelcome, setShowWelcome] = useState(false);
+    const [isClaiming, setIsClaiming] = useState(false);
 
     // Check auth and determine flow
     useEffect(() => {
@@ -58,17 +59,32 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
                 // For owned wardrobes, check if user is owner or admin
                 if (wardrobe.owner_id && wardrobe.owner_id !== user.id && profile?.role !== 'admin') {
                     setAuthRequired(true); // Wrong user
+                } else if (!wardrobe.owner_id) {
+                    // Unclaimed wardrobe - claim it for authenticated user
+                    setIsClaiming(true);
+                    try {
+                        const result = await claimWardrobe(token);
+                        if (result.success) {
+                            setShowWelcome(true);
+                            toast.success(locale === 'es' ? '¡Bienvenida al AC Styling Studio!' : 'Welcome to the AC Styling Studio!');
+                        } else {
+                            toast.error(result.error || 'Failed to claim wardrobe');
+                        }
+                    } catch (err) {
+                        console.error('Claim error:', err);
+                        toast.error('An unexpected error occurred');
+                    } finally {
+                        setIsClaiming(false);
+                    }
                 }
             } else {
                 setIsAuthenticated(false);
-                // If wardrobe has owner, require auth
-                if (wardrobe.owner_id) {
-                    setAuthRequired(true);
-                }
+                // Auth required for ALL wardrobes (no guest uploads)
+                setAuthRequired(true);
             }
         }
         checkAuth();
-    }, [supabase, wardrobe.owner_id]);
+    }, [supabase, wardrobe.owner_id, token, locale]);
 
     // File input refs
     const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -180,32 +196,25 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
         setIsUploading(false);
     };
 
-    // Handle "I'm Done"
+    // Handle "I'm Done" - always go to vault since wardrobe is now owned
     const handleDone = () => {
-        if (!wardrobe.owner_id) {
-            // New invite - show thank you modal
-            setShowThankYou(true);
-        } else {
-            // Existing wardrobe - go to vault
-            router.push(`/${locale}/vault`);
-        }
+        router.push(`/${locale}/vault`);
+    };
+
+    // Dismiss welcome screen
+    const handleDismissWelcome = () => {
+        setShowWelcome(false);
     };
 
     // Redirect to signup/login with return URL
-    // After claiming wardrobe, send user to vault (their wardrobe) not back to upload
-    const vaultPath = `/${locale}/vault`;
     const currentPath = `/${locale}/studio/upload/${token}`;
 
     const handleCreateAccount = () => {
-        // From thank-you modal: go to vault after signup
-        // For auth-required uploads: come back to upload page
-        const destination = showThankYou ? vaultPath : currentPath;
-        router.push(`/${locale}/signup?wardrobe=${token}&next=${encodeURIComponent(destination)}`);
+        router.push(`/${locale}/signup?wardrobe=${token}&next=${encodeURIComponent(currentPath)}`);
     };
 
     const handleLogin = () => {
-        const destination = showThankYou ? vaultPath : currentPath;
-        router.push(`/${locale}/login?wardrobe=${token}&next=${encodeURIComponent(destination)}`);
+        router.push(`/${locale}/login?wardrobe=${token}&next=${encodeURIComponent(currentPath)}`);
     };
 
     // Loading state
@@ -225,20 +234,72 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-md w-full mx-auto bg-white rounded-sm shadow-2xl overflow-hidden p-8 text-center"
             >
-                <LogIn className="w-12 h-12 mx-auto mb-4 text-ac-taupe/40" />
+                <div className="inline-block p-4 bg-ac-gold/10 rounded-full mb-6">
+                    <Sparkles className="w-8 h-8 text-ac-gold" />
+                </div>
                 <h1 className="font-serif text-2xl text-ac-taupe mb-2">
-                    {locale === 'es' ? 'Acceso Requerido' : 'Login Required'}
+                    {locale === 'es' ? 'Bienvenida al AC Styling Studio' : 'Welcome to AC Styling Studio'}
                 </h1>
-                <p className="text-sm text-ac-taupe/60 mb-6">
+                <p className="text-sm text-ac-taupe/60 mb-8">
                     {locale === 'es'
-                        ? 'Este armario pertenece a un usuario registrado. Inicia sesión para subir fotos.'
-                        : 'This wardrobe belongs to a registered user. Please log in to upload photos.'}
+                        ? 'Para subir tu armario, por favor crea una cuenta o inicia sesión.'
+                        : 'To upload your wardrobe, please create an account or sign in.'}
+                </p>
+                <div className="space-y-3">
+                    <button
+                        onClick={handleCreateAccount}
+                        className="w-full bg-ac-taupe text-white py-3 rounded-sm font-bold uppercase tracking-widest text-xs hover:bg-ac-gold transition-all"
+                    >
+                        {locale === 'es' ? 'Crear Cuenta' : 'Create Account'}
+                    </button>
+                    <button
+                        onClick={handleLogin}
+                        className="w-full border border-ac-taupe/20 text-ac-taupe py-3 rounded-sm font-bold uppercase tracking-widest text-xs hover:border-ac-gold hover:text-ac-gold transition-all"
+                    >
+                        {locale === 'es' ? 'Ya tengo cuenta' : 'I Already Have an Account'}
+                    </button>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // Claiming wardrobe in progress
+    if (isClaiming) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                <Loader2 className="w-10 h-10 text-ac-gold animate-spin mb-4" />
+                <p className="text-ac-taupe/60 text-sm uppercase tracking-widest">
+                    {locale === 'es' ? 'Configurando tu armario...' : 'Setting up your wardrobe...'}
+                </p>
+            </div>
+        );
+    }
+
+    // Welcome screen after claiming
+    if (showWelcome) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-md w-full mx-auto bg-white rounded-sm shadow-2xl overflow-hidden p-8 text-center"
+            >
+                <div className="inline-block p-4 bg-ac-gold/10 rounded-full mb-6">
+                    <Sparkles className="w-10 h-10 text-ac-gold" />
+                </div>
+                <h1 className="font-serif text-3xl text-ac-taupe mb-3">
+                    {locale === 'es' ? '¡Bienvenida al AC Styling Studio!' : 'Welcome to the AC Styling Studio!'}
+                </h1>
+                <p className="text-sm text-ac-taupe/60 mb-8">
+                    {locale === 'es'
+                        ? 'Tu armario personal está listo. Ahora puedes subir tus prendas.'
+                        : 'Your personal wardrobe is ready. You can now upload your clothing items.'}
                 </p>
                 <button
-                    onClick={handleLogin}
-                    className="w-full bg-ac-taupe text-white py-3 rounded-sm font-bold uppercase tracking-widest text-xs hover:bg-ac-gold transition-all"
+                    onClick={handleDismissWelcome}
+                    className="w-full bg-ac-taupe text-white py-3 rounded-sm font-bold uppercase tracking-widest text-xs hover:bg-ac-gold transition-all flex items-center justify-center gap-2"
                 >
-                    {locale === 'es' ? 'Iniciar Sesión' : 'Sign In'}
+                    <span>{locale === 'es' ? 'Comenzar a Subir' : 'Start Uploading'}</span>
+                    <ChevronRight size={14} />
                 </button>
             </motion.div>
         );
@@ -445,79 +506,8 @@ export default function WardrobeUploadLanding({ wardrobe, token, locale }: Props
                         )}
                     </AnimatePresence>
 
-                    {/* CTA: Login option for unclaimed wardrobes */}
-                    {!wardrobe.owner_id && uploadedCount === 0 && (
-                        <div className="pt-4 border-t border-ac-taupe/10 text-center">
-                            <p className="text-xs text-ac-taupe/40 mb-3 uppercase tracking-widest">
-                                {locale === 'es' ? '¿Ya tienes cuenta?' : 'Already have an account?'}
-                            </p>
-                            <button
-                                onClick={handleLogin}
-                                className="inline-flex items-center gap-2 border border-ac-taupe/20 text-ac-taupe px-6 py-2 rounded-sm font-bold uppercase tracking-widest text-xs hover:border-ac-gold hover:text-ac-gold transition-all"
-                            >
-                                <LogIn size={14} />
-                                {locale === 'es' ? 'Iniciar Sesión' : 'Sign In'}
-                            </button>
-                        </div>
-                    )}
                 </div>
             </motion.div>
-
-            {/* Thank You Modal */}
-            <AnimatePresence>
-                {showThankYou && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                        {/* Backdrop */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                        />
-
-                        {/* Modal */}
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                            className="relative w-full max-w-md bg-white rounded-sm shadow-xl p-6 md:p-8 z-10 text-center"
-                        >
-                            <Sparkles className="w-12 h-12 mx-auto mb-4 text-ac-gold" />
-                            <h2 className="font-serif text-2xl text-ac-taupe mb-2">
-                                {locale === 'es' ? '¡Gracias!' : 'Thank You!'}
-                            </h2>
-                            <p className="text-sm text-ac-taupe/70 mb-6">
-                                {locale === 'es'
-                                    ? 'Gracias por confiar en Ale con tu armario. Crearemos tu perfil de estilo personalizado.'
-                                    : "Thanks for trusting Ale with your wardrobe! We'll create your personalized style profile."}
-                            </p>
-
-                            <div className="bg-ac-gold/10 border border-ac-gold/20 p-4 rounded-sm mb-6">
-                                <p className="text-xs text-ac-taupe">
-                                    {locale === 'es'
-                                        ? 'Crea una cuenta para guardar tu armario y acceder a él en cualquier momento.'
-                                        : 'Create an account to save your wardrobe and access it anytime.'}
-                                </p>
-                            </div>
-
-                            <div className="space-y-3">
-                                <button
-                                    onClick={handleCreateAccount}
-                                    className="w-full bg-ac-taupe text-white py-3 rounded-sm font-bold uppercase tracking-widest text-xs hover:bg-ac-gold transition-all"
-                                >
-                                    {locale === 'es' ? 'Crear Cuenta' : 'Create Account'}
-                                </button>
-                                <button
-                                    onClick={handleLogin}
-                                    className="w-full border border-ac-taupe/20 text-ac-taupe py-3 rounded-sm font-bold uppercase tracking-widest text-xs hover:border-ac-gold hover:text-ac-gold transition-all"
-                                >
-                                    {locale === 'es' ? 'Ya tengo cuenta' : 'I Already Have an Account'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </>
     );
 }
