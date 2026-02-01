@@ -32,7 +32,7 @@ export default function JoinPage() {
             if (result?.error) {
                 toast.error(result.error);
             } else {
-                toast.success('Welcome to The Vault.');
+                toast.success('Check your email to verify your account.');
             }
         });
     };

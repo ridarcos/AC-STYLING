@@ -163,7 +163,6 @@ export async function signUpWithMagicLink(email: string) {
 }
 
 export async function signUpSeamless(formData: FormData, redirectTo: string) {
-    const supabase = await createClient();
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const fullName = formData.get('fullName') as string;
@@ -172,20 +171,57 @@ export async function signUpSeamless(formData: FormData, redirectTo: string) {
         return { error: 'Please fill in all fields.' };
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { createAdminClient } = await import("@/utils/supabase/admin");
+    const adminSupabase = createAdminClient();
+    const origin = (await headers()).get('origin');
+
+    // 1. Create User (Admin)
+    // We set email_confirm: false to require verification (standard security)
+    const { data: user, error: createError } = await adminSupabase.auth.admin.createUser({
+        email,
+        password,
+        user_metadata: { full_name: fullName },
+        email_confirm: false
+    });
+
+    if (createError) {
+        console.error('Signup Error:', createError);
+        return { error: createError.message };
+    }
+
+    // 2. Generate Branded Confirmation Link
+    const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
+        type: 'signup',
         email,
         password,
         options: {
-            data: {
-                full_name: fullName,
-            },
-            emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+            data: { full_name: fullName } // redundant but safe
         },
     });
 
-    if (error) {
-        console.error('Signup Error:', error);
-        return { error: error.message };
+    if (linkError) {
+        console.error('Error generating signup link:', linkError);
+        // If link fails, we should probably delete the user to allow retry? 
+        // Or just fail.
+        return { error: 'Failed to generate verification link.' };
+    }
+
+    // 3. Send Email via Resend
+    const { properties } = linkData;
+    if (properties?.action_link) {
+        const { success, error: emailError } = await sendEmail({
+            to: email,
+            subject: 'Welcome to AC Styling - Confirm your account',
+            html: getMagicLinkHtml(properties.action_link), // Reusing magic link template for confirmation
+        });
+
+        if (!success) {
+            console.error('Error sending confirmation email:', emailError);
+            return { error: 'Failed to send confirmation email.' };
+        }
+    } else {
+        return { error: 'System error: No confirmation link generated.' };
     }
 
     return { success: true };
