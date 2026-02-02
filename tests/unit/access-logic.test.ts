@@ -43,11 +43,27 @@ describe('Access Logic - grantAccessForProduct', () => {
                 })),
             })
 
+            // Mock Masterclass & Chapter queries (returning null)
+            const emptyQuery = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }
+
+            mockSupabase._mockFrom
+                .mockReturnValueOnce(emptyQuery) // Masterclass
+                .mockReturnValueOnce(emptyQuery) // Chapter
+                .mockReturnValueOnce({ // Profile update
+                    update: vi.fn(() => ({
+                        eq: vi.fn().mockResolvedValue({ error: null }),
+                    })),
+                })
+
             const result = await grantAccessForProduct(
                 mockSupabase as any,
                 'user-123',
                 'prod_full_access_123',
-                mockLog
+                mockLog as any
             )
 
             expect(result).toBe(true)
@@ -71,7 +87,16 @@ describe('Access Logic - grantAccessForProduct', () => {
                 })),
             }
 
+            // Mock Masterclass & Chapter queries (returning null)
+            const emptyQuery = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }
+
             mockSupabase._mockFrom
+                .mockReturnValueOnce(emptyQuery) // Masterclass
+                .mockReturnValueOnce(emptyQuery) // Chapter
                 .mockReturnValueOnce(offerQuery)
                 .mockReturnValueOnce(profileUpdate)
 
@@ -79,7 +104,7 @@ describe('Access Logic - grantAccessForProduct', () => {
                 mockSupabase as any,
                 'user-123',
                 'prod_offer_456',
-                mockLog
+                mockLog as any
             )
 
             expect(result).toBe(true)
@@ -98,7 +123,16 @@ describe('Access Logic - grantAccessForProduct', () => {
                 })),
             }
 
+            // Mock Masterclass & Chapter queries (returning null)
+            const emptyQuery = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }
+
             mockSupabase._mockFrom
+                .mockReturnValueOnce(emptyQuery) // Masterclass
+                .mockReturnValueOnce(emptyQuery) // Chapter
                 .mockReturnValueOnce(offerQuery)
                 .mockReturnValueOnce(profileUpdate)
 
@@ -106,7 +140,7 @@ describe('Access Logic - grantAccessForProduct', () => {
                 mockSupabase as any,
                 'user-123',
                 'prod_course_pass',
-                mockLog
+                mockLog as any
             )
 
             expect(result).toBe(true)
@@ -139,7 +173,6 @@ describe('Access Logic - grantAccessForProduct', () => {
             }
 
             mockSupabase._mockFrom
-                .mockReturnValueOnce(offerQuery)
                 .mockReturnValueOnce(masterclassQuery)
                 .mockReturnValueOnce(grantInsert)
 
@@ -147,7 +180,7 @@ describe('Access Logic - grantAccessForProduct', () => {
                 mockSupabase as any,
                 'user-123',
                 'prod_masterclass_789',
-                mockLog
+                mockLog as any
             )
 
             expect(result).toBe(true)
@@ -186,17 +219,23 @@ describe('Access Logic - grantAccessForProduct', () => {
                 insert: vi.fn().mockResolvedValue({ error: null }),
             }
 
+            // Mock Masterclass & Chapter queries (returning null)
+            const emptyQuery = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }
+
             mockSupabase._mockFrom
-                .mockReturnValueOnce(offerQuery)
-                .mockReturnValueOnce(masterclassQuery)
-                .mockReturnValueOnce(chapterQuery)
+                .mockReturnValueOnce(emptyQuery) // Masterclass (not found)
+                .mockReturnValueOnce(chapterQuery) // Chapter (found)
                 .mockReturnValueOnce(grantInsert)
 
             const result = await grantAccessForProduct(
                 mockSupabase as any,
                 'user-123',
                 'prod_chapter_101',
-                mockLog
+                mockLog as any
             )
 
             expect(result).toBe(true)
@@ -206,6 +245,7 @@ describe('Access Logic - grantAccessForProduct', () => {
 
     describe('No Match', () => {
         it('returns false when product matches nothing', async () => {
+            // Mocking setup...
             // Mock offer lookup (not found)
             const offerQuery = {
                 select: vi.fn().mockReturnThis(),
@@ -228,18 +268,73 @@ describe('Access Logic - grantAccessForProduct', () => {
             }
 
             mockSupabase._mockFrom
-                .mockReturnValueOnce(offerQuery)
+                .mockReturnValueOnce(masterclassQuery) // Correct order now: MC -> Chapter -> Offer (or MC -> Chapter -> (Env Check) -> Offer)
+                // Wait, the logic is MC -> Chapter -> Env -> Offer.
+                // In "No Match", access-logic checks MC (1), then Chapter (2), then Env check (not DB call), then Offer (3).
+                // So expected mock calls are:
+                // 1. Masterclass query
+                // 2. Chapter query
+                // 3. Offer query
+
+                // Let's match the implemented order:
                 .mockReturnValueOnce(masterclassQuery)
                 .mockReturnValueOnce(chapterQuery)
+                .mockReturnValueOnce(offerQuery)
 
             const result = await grantAccessForProduct(
                 mockSupabase as any,
                 'user-123',
                 'prod_unknown',
-                mockLog
+                mockLog as any
             )
 
             expect(result).toBe(false)
+        })
+    })
+
+    describe('Conflict Resolution (Regression Test)', () => {
+        it('prioritizes Masterclass grant over Full Access when ID conflicts', async () => {
+            const conflictProductId = 'prod_conflict_123'
+            vi.stubEnv('STRIPE_FULL_ACCESS_PRODUCT_ID', conflictProductId)
+
+            // Setup Mocks based on new priority:
+            // 1. Masterclass query (FOUND) -> Grants access and returns true.
+            const masterclassQuery = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({
+                    data: { id: 'mc_conflict', title: 'Conflict Masterclass' },
+                    error: null
+                }),
+            }
+
+            // Grant Insert
+            const grantInsert = {
+                insert: vi.fn().mockResolvedValue({ error: null }),
+            }
+
+            // Expect sequential calls:
+            // 1. from('masterclasses')... -> returns masterclassQuery
+            // 2. from('user_access_grants')... -> returns grantInsert
+
+            mockSupabase._mockFrom
+                .mockReturnValueOnce(masterclassQuery)
+                .mockReturnValueOnce(grantInsert)
+
+            const result = await grantAccessForProduct(
+                mockSupabase as any,
+                'user-123',
+                conflictProductId,
+                mockLog as any
+            )
+
+            expect(result).toBe(true)
+
+            // Verify specific grant
+            expect(mockLog).toHaveBeenCalledWith('success', 'Granted Masterclass: Conflict Masterclass')
+
+            // Verify NO full access grant (generic log should not be called)
+            expect(mockLog).not.toHaveBeenCalledWith('success', 'Granted Full Access (Env Match)')
         })
     })
 })

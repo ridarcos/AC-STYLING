@@ -7,36 +7,7 @@ export async function grantAccessForProduct(
     productId: string,
     logFn?: (status: string, msg: string) => Promise<void>
 ): Promise<boolean> {
-    const FULL_UNLOCK_PRODUCT_ID = process.env.STRIPE_FULL_ACCESS_PRODUCT_ID;
-
-    // 1. Full Unlock (Env)
-    if (productId === FULL_UNLOCK_PRODUCT_ID) {
-        await supabase.from('profiles').update({ has_full_unlock: true }).eq('id', userId);
-        if (logFn) await logFn('success', 'Granted Full Access (Env Match)');
-        return true;
-    }
-
-    // 2. Offers (Full Pass / Course Pass)
-    const { data: offer } = await supabase
-        .from('offers')
-        .select('slug')
-        .eq('stripe_product_id', productId)
-        .eq('active', true)
-        .maybeSingle();
-
-    if (offer) {
-        if (offer.slug === 'full_access') {
-            await supabase.from('profiles').update({ has_full_unlock: true }).eq('id', userId);
-            if (logFn) await logFn('success', 'Granted Full Access (Offer)');
-            return true;
-        } else if (offer.slug === 'course_pass') {
-            await supabase.from('profiles').update({ has_course_pass: true }).eq('id', userId);
-            if (logFn) await logFn('success', 'Granted Course Pass (Offer)');
-            return true;
-        }
-    }
-
-    // 3. Masterclass
+    // 1. Masterclass (Specific Check)
     const { data: masterclass, error: mcError } = await supabase
         .from('masterclasses')
         .select('id, title')
@@ -57,7 +28,7 @@ export async function grantAccessForProduct(
         return true;
     }
 
-    // 4. Chapter
+    // 2. Chapter (Specific Check)
     const { data: chapter, error: chError } = await supabase
         .from('chapters')
         .select('id, title')
@@ -76,6 +47,35 @@ export async function grantAccessForProduct(
             if (logFn) await logFn('success', `Granted Chapter: ${chapter.title}`);
         }
         return true;
+    }
+
+    const FULL_UNLOCK_PRODUCT_ID = process.env.STRIPE_FULL_ACCESS_PRODUCT_ID;
+
+    // 3. Full Unlock (Env)
+    if (productId === FULL_UNLOCK_PRODUCT_ID) {
+        await supabase.from('profiles').update({ has_full_unlock: true }).eq('id', userId);
+        if (logFn) await logFn('success', 'Granted Full Access (Env Match)');
+        return true;
+    }
+
+    // 4. Offers (Full Pass / Course Pass)
+    const { data: offer } = await supabase
+        .from('offers')
+        .select('slug')
+        .eq('stripe_product_id', productId)
+        .eq('active', true)
+        .maybeSingle();
+
+    if (offer) {
+        if (offer.slug === 'full_access') {
+            await supabase.from('profiles').update({ has_full_unlock: true }).eq('id', userId);
+            if (logFn) await logFn('success', 'Granted Full Access (Offer)');
+            return true;
+        } else if (offer.slug === 'course_pass') {
+            await supabase.from('profiles').update({ has_course_pass: true }).eq('id', userId);
+            if (logFn) await logFn('success', 'Granted Course Pass (Offer)');
+            return true;
+        }
     }
 
     return false;
