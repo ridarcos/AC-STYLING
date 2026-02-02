@@ -16,59 +16,7 @@ interface MasterclassFormProps {
 // ... (imports)
 import { Video } from "lucide-react";
 
-// NEW: Simple sub-component for video upload to avoid hook conflict issues or code dupe clutter
-function VideoUpload({ value, onChange }: { value: string, onChange: (url: string) => void }) {
-    const [uploading, setUploading] = useState(false);
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        accept: { 'video/*': ['.mp4', '.mov', '.webm'] },
-        maxFiles: 1,
-        onDrop: async (acceptedFiles) => {
-            if (acceptedFiles.length === 0) return;
-            setUploading(true);
-            const fd = new FormData();
-            fd.append('file', acceptedFiles[0]);
-            const result = await uploadFile(fd);
-            if (result.success) {
-                onChange(result.url!);
-                toast.success('Video uploaded');
-            } else {
-                toast.error(result.error || 'Upload failed');
-            }
-            setUploading(false);
-        }
-    });
 
-    if (value) {
-        return (
-            <div className="relative aspect-video rounded-sm overflow-hidden border border-ac-taupe/20 bg-black">
-                <video src={value} className="w-full h-full object-cover" controls />
-                <button
-                    type="button"
-                    onClick={() => onChange('')}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 z-10"
-                >
-                    <X size={16} />
-                </button>
-            </div>
-        );
-    }
-
-    return (
-        <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-colors aspect-video flex flex-col items-center justify-center ${isDragActive
-                ? 'border-ac-gold bg-ac-gold/5'
-                : 'border-ac-taupe/20 hover:border-ac-gold/50 bg-white/20'
-                }`}
-        >
-            <input {...getInputProps()} />
-            <Video size={32} className="mx-auto mb-3 text-ac-taupe/40" />
-            <p className="text-sm text-ac-taupe/60">
-                {uploading ? 'Uploading...' : 'Drop video teaser here'}
-            </p>
-        </div>
-    );
-}
 
 export default function MasterclassForm({ masterclass, onSuccess, onCancel }: MasterclassFormProps) {
     const [loading, setLoading] = useState(false);
@@ -205,10 +153,23 @@ export default function MasterclassForm({ masterclass, onSuccess, onCancel }: Ma
                     {/* We can reuse the dropzone info or create a new one, but for simplicity we will just use a second dropzone component or existing upload logic if we can split it. 
                          Since hooks like useDropzone can be used multiple times, let's just make a helper or duplicate the dropzone for now for speed.
                       */}
-                    <VideoUpload
-                        value={formData.videoUrl}
-                        onChange={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
-                    />
+                    <div className="space-y-2">
+                        <label className="block text-xs font-bold text-ac-taupe/80 uppercase tracking-widest">
+                            Vimeo ID (Teaser)
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.videoUrl}
+                            // Note: Keeping formData key as 'videoUrl' for minimal refactor, 
+                            // but conceptually it's the ID.
+                            onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                            className="w-full bg-white/40 border border-ac-taupe/10 rounded-sm p-3 text-ac-taupe focus:border-ac-gold focus:ring-1 focus:ring-ac-gold font-mono text-xs"
+                            placeholder="e.g. 123456789"
+                        />
+                        <p className="text-[10px] text-ac-taupe/60">
+                            Enter the Vimeo video ID for the masterclass teaser.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Details */}

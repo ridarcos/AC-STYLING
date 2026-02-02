@@ -7,6 +7,7 @@ import { checkAccess } from "@/utils/access-control";
 import UnlockButton from "@/components/monetization/UnlockButton";
 import RestorePurchasesButton from "@/components/monetization/RestorePurchasesButton";
 import CheckoutSyncHandler from "@/components/monetization/CheckoutSyncHandler";
+import VaultVideoPlayer from "@/components/vault/VaultVideoPlayer";
 
 export const dynamic = 'force-dynamic';
 
@@ -86,14 +87,11 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                     <div className="lg:col-span-3 aspect-video rounded-sm overflow-hidden shadow-lg relative group bg-black">
                         {masterclass.video_url ? (
                             <div className="w-full h-full relative group/video">
-                                <video
-                                    src={masterclass.video_url}
-                                    className="w-full h-full object-cover"
-                                    controls
-                                    playsInline
-                                    poster={masterclass.thumbnail_url}
+                                <VaultVideoPlayer
+                                    videoId={masterclass.video_url}
+                                    locale={locale}
+                                    title={mcTitle} // Optional: Pass title for tracking or logging if needed by player
                                 />
-                                {/* No Lock Overlay for Video if it exists, as it's a teaser */}
                             </div>
                         ) : (
                             <div className="w-full h-full relative">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { Layers, Check, PlayCircle, X } from "lucide-react";
+import VaultVideoPlayer from "@/components/vault/VaultVideoPlayer";
 
 interface MasterclassCardProps {
     masterclass: any;
@@ -40,12 +41,9 @@ export default function MasterclassCard({
             <div className="relative aspect-[16/9] overflow-hidden rounded-sm mb-3 shadow-md group-hover:shadow-xl transition-all duration-500 bg-black">
                 {isPlaying && videoUrl ? (
                     <div className="absolute inset-0 z-50 bg-black animate-in fade-in">
-                        <video
-                            src={videoUrl}
-                            className="w-full h-full object-cover"
-                            controls
-                            autoPlay
-                            playsInline
+                        <VaultVideoPlayer
+                            videoId={videoUrl}
+                            locale={locale}
                         />
                         <button
                             onClick={(e) => {
