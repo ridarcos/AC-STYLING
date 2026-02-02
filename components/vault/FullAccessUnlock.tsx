@@ -23,10 +23,10 @@ export default function FullAccessUnlock({ userId, hasFullAccess }: { userId?: s
         load();
     }, []);
 
+    const router = useRouter();
+
     // Don't show if user already has full access or if no offer exists
     if (hasFullAccess || !offer) return null;
-
-    const router = useRouter();
 
     const handlePurchase = async () => {
         if (!userId) {

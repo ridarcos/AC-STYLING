@@ -23,9 +23,9 @@ export default function CoursePassUnlock({ userId, hasCoursePass }: { userId?: s
         fetchOffer();
     }, []);
 
-    if (!offer || hasCoursePass) return null;
-
     const router = useRouter(); // Use next-intl router
+
+    if (!offer || hasCoursePass) return null;
     const handlePurchase = async () => {
         if (!userId) {
             // Redirect to Join page for guests
