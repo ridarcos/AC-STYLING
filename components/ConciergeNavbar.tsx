@@ -4,7 +4,7 @@ import { Link } from "@/i18n/routing";
 import { User } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 
-export default function ConciergeNavbar() {
+export default function ConciergeNavbar({ isGuest }: { isGuest?: boolean }) {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md py-4 shadow-sm text-ac-taupe">
             <div className="container mx-auto px-6 md:px-12 flex justify-between items-center">
@@ -32,7 +32,10 @@ export default function ConciergeNavbar() {
                 <div className="flex items-center space-x-6 md:space-x-8">
                     <LanguageSwitcher isScrolled={true} />
 
-                    <Link href="/vault/profile" className="flex items-center gap-2 text-sm uppercase tracking-widest hover:text-ac-gold transition-colors duration-300">
+                    <Link
+                        href={isGuest ? "/vault/join" : "/vault/profile"}
+                        className="flex items-center gap-2 text-sm uppercase tracking-widest hover:text-ac-gold transition-colors duration-300"
+                    >
                         <span className="hidden md:inline">Profile</span>
                         <div className="p-2 border border-ac-taupe/20 rounded-full hover:border-ac-gold transition-colors">
                             <User size={18} />
