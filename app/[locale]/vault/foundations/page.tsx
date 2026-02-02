@@ -162,7 +162,7 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                             );
 
                             return isGuest ? (
-                                <Link href={`/${locale}/vault/join`} key={mc.id} className="group block relative cursor-pointer opacity-80 hover:opacity-100">
+                                <Link href="/vault/join" key={mc.id} className="group block relative cursor-pointer opacity-80 hover:opacity-100">
                                     {CardContent}
                                 </Link>
                             ) : (
