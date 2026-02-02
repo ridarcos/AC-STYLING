@@ -1,9 +1,10 @@
 
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
-import { ArrowLeft, PlayCircle, FolderOpen, Check } from "lucide-react";
+import { ArrowLeft, PlayCircle, Check } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import CoursePassUnlock from "@/components/vault/CoursePassUnlock";
+import SafeImage from "@/components/ui/SafeImage";
 
 export default async function CoursesPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
@@ -12,11 +13,11 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Fetch Standalone Chapters (is_standalone = true)
+    // Fetch Courses (category = 'course')
     const { data: chapters } = await supabase
         .from('chapters')
         .select('*')
-        .eq('is_standalone', true)
+        .eq('category', 'course')
         .order('order_index', { ascending: true });
 
     // User Progress & Profile Logic
@@ -81,17 +82,11 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
                             <Link href={`/vault/courses/${chapter.slug}`} key={chapter.id} className="group block">
                                 <div className="relative aspect-[4/3] overflow-hidden rounded-sm mb-3 bg-ac-sand/20">
                                     <div className="absolute inset-0 bg-ac-taupe/10 group-hover:bg-transparent transition-colors z-10" />
-                                    {displayThumb ? (
-                                        <img
-                                            src={displayThumb}
-                                            alt={displayTitle}
-                                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-ac-taupe/20">
-                                            <FolderOpen size={40} />
-                                        </div>
-                                    )}
+                                    <SafeImage
+                                        src={displayThumb}
+                                        alt={displayTitle}
+                                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                                    />
 
                                     {/* Completion Badge */}
                                     <div className="absolute top-4 right-4 z-30">
