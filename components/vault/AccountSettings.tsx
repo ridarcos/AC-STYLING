@@ -39,10 +39,10 @@ export default function AccountSettings() {
     };
 
     return (
-        <div className="mt-12 py-8">
-            <h3 className="font-serif text-xl text-ac-taupe mb-6">Account Settings</h3>
+        <div className="mt-8 py-8 flex flex-col items-center">
+            {/* <h3 className="font-serif text-xl text-ac-taupe mb-6">Account Settings</h3> */}
 
-            <div className="flex flex-col gap-4 items-start">
+            <div className="flex flex-col gap-6 items-center">
                 <button
                     onClick={handleSignOut}
                     className="flex items-center gap-2 bg-ac-taupe text-white px-6 py-3 rounded-sm text-[10px] uppercase tracking-widest font-bold hover:bg-ac-taupe/90 transition-colors shadow-sm"
@@ -51,26 +51,26 @@ export default function AccountSettings() {
                     Sign Out
                 </button>
 
-                <div className="pt-4">
+                <div>
                     {!showConfirm ? (
                         <button
                             onClick={() => setShowConfirm(true)}
-                            className="flex items-center gap-2 text-red-400 hover:text-red-500 transition-colors text-sm uppercase tracking-widest font-bold"
+                            className="flex items-center gap-2 text-red-400 hover:text-red-500 transition-colors text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100"
                         >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                             Delete Account
                         </button>
                     ) : (
-                        <div className="bg-red-50 border border-red-100 p-6 rounded-sm max-w-md animate-in fade-in slide-in-from-top-2">
-                            <div className="flex items-center gap-3 text-red-600 mb-2">
+                        <div className="bg-red-50 border border-red-100 p-6 rounded-sm max-w-md animate-in fade-in slide-in-from-top-2 text-center">
+                            <div className="flex justify-center items-center gap-3 text-red-600 mb-2">
                                 <AlertTriangle size={20} />
                                 <span className="font-bold uppercase tracking-widest text-xs">Danger Zone</span>
                             </div>
                             <p className="text-sm text-red-800/80 mb-6">
-                                This action is permanent. All your data, measurements, and wardrobe items will be lost immediately.
+                                This action is permanent. All your data will be lost.
                             </p>
 
-                            <div className="flex items-center gap-4">
+                            <div className="flex justify-center items-center gap-4">
                                 <button
                                     onClick={handleDelete}
                                     disabled={isDeleting}

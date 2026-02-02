@@ -66,14 +66,14 @@ export default async function ProfileHub() {
                 </div>
             </div>
 
-            {/* Account Settings Section */}
-            <div className="container mx-auto px-4 max-w-4xl">
-                <AccountSettings />
+            {/* Disclaimer / Footer */}
+            <div className="mt-12 mb-8 text-center text-[#3D3630]/40 text-[10px] uppercase tracking-widest">
+                AC Styling • Vault Profile • ID: {profile.id.slice(0, 8)}
             </div>
 
-            {/* Disclaimer / Footer */}
-            <div className="mt-12 mb-12 text-center text-[#3D3630]/40 text-[10px] uppercase tracking-widest">
-                AC Styling • Vault Profile • ID: {profile.id.slice(0, 8)}
+            {/* Account Settings Section */}
+            <div className="container mx-auto px-4 max-w-4xl pb-12">
+                <AccountSettings />
             </div>
         </div>
     );
