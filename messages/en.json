@@ -161,6 +161,9 @@
         "explore": "Explore",
         "studios": "Studios",
         "connect": "Connect",
-        "rights": "All Rights Reserved."
+        "rights": "All Rights Reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service",
+        "refunds": "Refund Policy"
     }
 }

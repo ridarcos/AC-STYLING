@@ -2,6 +2,7 @@
 
 import { Instagram } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
 
 const TikTokIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
     <svg
@@ -72,8 +73,9 @@ export default function Footer() {
                 <div className="mt-8 border-t border-ac-sand/10 pt-6 flex flex-col md:flex-row justify-between items-center text-xs text-ac-sand/40">
                     <p>&copy; {new Date().getFullYear()} The AC Style. {t('rights')}</p>
                     <div className="flex space-x-6 mt-4 md:mt-0">
-                        <a href="#" className="hover:text-ac-sand">Privacy Policy</a>
-                        <a href="#" className="hover:text-ac-sand">Terms of Service</a>
+                        <Link href="/legal/privacy" className="hover:text-ac-sand transition-colors">{t('privacy')}</Link>
+                        <Link href="/legal/terms" className="hover:text-ac-sand transition-colors">{t('terms')}</Link>
+                        <Link href="/legal/refunds" className="hover:text-ac-sand transition-colors">{t('refunds')}</Link>
                     </div>
                 </div>
             </div>
