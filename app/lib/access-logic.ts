@@ -14,6 +14,8 @@ export async function grantAccessForProduct(
         .eq('stripe_product_id', productId)
         .maybeSingle();
 
+    if (logFn) await logFn('info', `Checking Masterclass for ${productId}: Found=${!!masterclass}`);
+
     if (masterclass) {
         const { error: grantError } = await supabase.from('user_access_grants').insert({
             user_id: userId,
@@ -51,6 +53,8 @@ export async function grantAccessForProduct(
 
     const FULL_UNLOCK_PRODUCT_ID = process.env.STRIPE_FULL_ACCESS_PRODUCT_ID;
 
+    if (logFn) await logFn('info', `Checking Full Access for ${productId}: Target=${FULL_UNLOCK_PRODUCT_ID}, Match=${productId === FULL_UNLOCK_PRODUCT_ID}`);
+
     // 3. Full Unlock (Env)
     if (productId === FULL_UNLOCK_PRODUCT_ID) {
         await supabase.from('profiles').update({ has_full_unlock: true }).eq('id', userId);
@@ -65,6 +69,8 @@ export async function grantAccessForProduct(
         .eq('stripe_product_id', productId)
         .eq('active', true)
         .maybeSingle();
+
+    if (logFn) await logFn('info', `Checking Offer for ${productId}: Found=${!!offer}, Slug=${offer?.slug}`);
 
     if (offer) {
         if (offer.slug === 'full_access') {
