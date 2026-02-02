@@ -8,6 +8,7 @@ import UnlockButton from "@/components/monetization/UnlockButton";
 import RestorePurchasesButton from "@/components/monetization/RestorePurchasesButton";
 import CheckoutSyncHandler from "@/components/monetization/CheckoutSyncHandler";
 import VaultVideoPlayer from "@/components/vault/VaultVideoPlayer";
+import SafeImage from "@/components/ui/SafeImage";
 
 export const dynamic = 'force-dynamic';
 
@@ -95,8 +96,8 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                             </div>
                         ) : (
                             <div className="w-full h-full relative">
-                                <img
-                                    src={masterclass.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
+                                <SafeImage
+                                    src={masterclass.thumbnail_url}
                                     alt={mcTitle}
                                     className={`w-full h-full object-cover transition-all duration-700 ${!hasAccess ? 'group-hover:scale-105 filter brightness-75' : ''}`}
                                 />
@@ -185,17 +186,11 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                         <>
                             <div className="relative aspect-video overflow-hidden rounded-sm mb-3 bg-ac-sand/20">
                                 <div className="absolute inset-0 bg-ac-taupe/10 group-hover:bg-transparent transition-colors z-10" />
-                                {chThumb ? (
-                                    <img
-                                        src={chThumb}
-                                        alt={chTitle}
-                                        className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${hasAccess ? 'grayscale group-hover:grayscale-0' : 'grayscale filter contrast-75'}`}
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-ac-taupe/20">
-                                        <FolderOpen size={32} />
-                                    </div>
-                                )}
+                                <SafeImage
+                                    src={chThumb}
+                                    alt={chTitle}
+                                    className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${hasAccess ? 'grayscale group-hover:grayscale-0' : 'grayscale filter contrast-75'}`}
+                                />
 
                                 <div className="absolute top-2 right-2 z-30">
                                     {hasAccess ? (
