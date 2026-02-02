@@ -82,16 +82,31 @@ export default async function MasterclassPage({ params }: { params: Promise<{ id
                 </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-                    {/* Thumbnail */}
-                    <div className="lg:col-span-3 aspect-video rounded-sm overflow-hidden shadow-lg relative group">
-                        <img
-                            src={masterclass.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
-                            alt={mcTitle}
-                            className={`w-full h-full object-cover transition-all duration-700 ${!hasAccess ? 'group-hover:scale-105 filter brightness-75' : ''}`}
-                        />
-                        {!hasAccess && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                                <Lock className="text-white/80 w-12 h-12" />
+                    {/* Thumbnail / Video */}
+                    <div className="lg:col-span-3 aspect-video rounded-sm overflow-hidden shadow-lg relative group bg-black">
+                        {masterclass.video_url ? (
+                            <div className="w-full h-full relative group/video">
+                                <video
+                                    src={masterclass.video_url}
+                                    className="w-full h-full object-cover"
+                                    controls
+                                    playsInline
+                                    poster={masterclass.thumbnail_url}
+                                />
+                                {/* No Lock Overlay for Video if it exists, as it's a teaser */}
+                            </div>
+                        ) : (
+                            <div className="w-full h-full relative">
+                                <img
+                                    src={masterclass.thumbnail_url || "https://images.unsplash.com/photo-1490481651871-ab52661227ed?q=80&w=2070&auto=format&fit=crop"}
+                                    alt={mcTitle}
+                                    className={`w-full h-full object-cover transition-all duration-700 ${!hasAccess ? 'group-hover:scale-105 filter brightness-75' : ''}`}
+                                />
+                                {!hasAccess && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                                        <Lock className="text-white/80 w-12 h-12" />
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

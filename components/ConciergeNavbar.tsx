@@ -25,7 +25,8 @@ export default function ConciergeNavbar({ isGuest }: { isGuest?: boolean }) {
                         }}
                     />
                     <span className="font-serif text-lg font-bold tracking-widest uppercase text-ac-taupe">
-                        AC Styling Lab
+                        <span className="md:hidden">AC</span>
+                        <span className="hidden md:inline">AC Styling Lab</span>
                     </span>
                 </Link>
 

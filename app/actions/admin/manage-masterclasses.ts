@@ -37,6 +37,7 @@ export async function createMasterclass(formData: FormData) {
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
     const stripeProductId = formData.get('stripeProductId') as string;
     const priceId = formData.get('priceId') as string;
+    const videoUrl = formData.get('videoUrl') as string;
 
     const { data, error } = await supabase
         .from('masterclasses')
@@ -48,6 +49,7 @@ export async function createMasterclass(formData: FormData) {
             subtitle_es: subtitleEs,
             description_es: descriptionEs,
             thumbnail_url: thumbnailUrl,
+            video_url: videoUrl,
             order_index: orderIndex,
             stripe_product_id: stripeProductId,
             price_id: priceId
@@ -79,6 +81,7 @@ export async function updateMasterclass(id: string, formData: FormData) {
     const orderIndex = parseInt(formData.get('orderIndex') as string) || 0;
     const stripeProductId = formData.get('stripeProductId') as string;
     const priceId = formData.get('priceId') as string;
+    const videoUrl = formData.get('videoUrl') as string;
 
     const { error } = await supabase
         .from('masterclasses')
@@ -90,6 +93,7 @@ export async function updateMasterclass(id: string, formData: FormData) {
             subtitle_es: subtitleEs,
             description_es: descriptionEs,
             thumbnail_url: thumbnailUrl,
+            video_url: videoUrl,
             order_index: orderIndex,
             stripe_product_id: stripeProductId,
             price_id: priceId,
