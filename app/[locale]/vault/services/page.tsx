@@ -19,6 +19,8 @@ export default async function ServicesPage({ params }: { params: { locale: strin
         .order('order_index', { ascending: true });
 
     // Fetch User Essence for Recommendation
+    const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = !user || user.is_anonymous;
     const essenceAnswers = await getFlatEssenceAnswers();
 
     // Simple Recommendation Logic
@@ -83,6 +85,7 @@ export default async function ServicesPage({ params }: { params: { locale: strin
                     retainerService={retainerService}
                     recommendedServiceId={recommendedServiceId}
                     recommendationReason={recommendationReason}
+                    isGuest={isGuest}
                 />
             </div>
         </section>
