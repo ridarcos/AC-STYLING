@@ -118,6 +118,12 @@ export default function AdminNotificationsPanel() {
         setProcessingId(null);
     };
 
+    const handleAnswerReply = async (id: string) => {
+        setNotifications(prev =>
+            prev.map(n => n.id === id ? { ...n, status: 'read', action_taken: 'answered' } : n)
+        );
+    };
+
     const handleMarkAllRead = async () => {
         const res = await markAllAsRead();
         if (res.success) {
@@ -130,10 +136,14 @@ export default function AdminNotificationsPanel() {
         }
     };
 
+    const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+
     // Filter Logic
     const filteredNotifications = notifications.filter(n => {
-        // 1. Status Filter (Hide read if toggle is off? Optional. Let's show all for now but sort unread first)
-        // Just keeping simple "All" vs "Unread" toggle logic if needed, but for now showing mixed.
+        // 1. Status Filter
+        if (showUnreadOnly && n.status !== 'unread') {
+            return false;
+        }
 
         // 2. Tab Filter
         if (activeTab === 'sales') {
@@ -144,6 +154,9 @@ export default function AdminNotificationsPanel() {
         }
         if (activeTab === 'inbox') {
             return ['wardrobe_item', 'general'].includes(n.type);
+        }
+        if (activeTab === 'questions') {
+            return n.type === 'question';
         }
         return true;
     });
@@ -171,10 +184,23 @@ export default function AdminNotificationsPanel() {
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-2 ${showUnreadOnly
+                            ? 'bg-ac-taupe text-white border-ac-taupe'
+                            : 'text-ac-taupe/60 border-ac-taupe/20 hover:border-ac-taupe/40'
+                            }`}
+                    >
+                        <Filter size={12} />
+                        {showUnreadOnly ? 'Showing Unread' : 'Filter Unread'}
+                    </button>
+
+                    <div className="h-4 w-px bg-ac-taupe/20"></div>
+
                     <button
                         onClick={handleMarkAllRead}
-                        className="text-xs text-ac-taupe/60 hover:text-ac-gold transition-colors flex items-center gap-1 mr-2"
+                        className="text-xs text-ac-taupe/60 hover:text-ac-gold transition-colors flex items-center gap-1"
                     >
                         <CheckCheck size={14} /> Mark all read
                     </button>
@@ -236,6 +262,7 @@ export default function AdminNotificationsPanel() {
                             onMarkRead={handleMarkRead}
                             onTakeAction={handleTakeAction}
                             isProcessing={processingId === notification.id}
+                            onAnswerReply={handleAnswerReply}
                         />
                     ))}
                 </AnimatePresence>
@@ -248,12 +275,14 @@ function NotificationCard({
     notification,
     onMarkRead,
     onTakeAction,
-    isProcessing
+    isProcessing,
+    onAnswerReply,
 }: {
     notification: AdminNotification;
     onMarkRead: (id: string, type?: string) => void;
     onTakeAction: (id: string, action: string, type?: string) => void;
     isProcessing: boolean;
+    onAnswerReply: (id: string) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
     const [replying, setReplying] = useState(false);
@@ -274,7 +303,9 @@ function NotificationCard({
             toast.success("Answer sent!");
             setReplying(false);
             setReplyText("");
+            setReplyText("");
             onMarkRead(notification.id); // Also mark notification as read
+            onAnswerReply(notification.id); // Update UI to show 'Answered'
         } else {
             toast.error(res.error || "Failed to send answer");
         }
@@ -334,7 +365,8 @@ function NotificationCard({
                                 {notification.action_taken}
                             </span>
                         )}
-                        {notification.status === 'read' && isQuestion && (
+                        {/* Specifically for Q&A, if we replied, show Answered even if read implies it */}
+                        {!isActioned && notification.type === 'question' && notification.action_taken === 'answered' && (
                             <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] uppercase tracking-wider rounded-sm">
                                 Answered
                             </span>

@@ -65,22 +65,54 @@ export async function askQuestion(formData: FormData) {
 // 2. Admin Answers Question
 export async function answerQuestion(questionId: string, answer: string) {
     const supabase = await createClient();
-    // Ideally check if user is admin, but admin panel is protected by middleware/layout.
-
-    // Use Admin Client to ensure we can update any user's question
     const supabaseAdmin = createAdminClient();
 
     try {
-        const { error } = await supabaseAdmin
+        // A. Update Question Status
+        const { data: questionData, error: updateError } = await supabaseAdmin
             .from('user_questions')
             .update({
                 answer: answer,
                 status: 'answered',
                 answered_at: new Date().toISOString()
             })
-            .eq('id', questionId);
+            .eq('id', questionId)
+            .select() // Select to get user_id back if needed, but we might want to fetch it before to be safe
+            .single();
 
-        if (error) throw new Error(error.message);
+        if (updateError) throw new Error(updateError.message);
+
+        // B. Fetch User Email to Send Notification
+        const userId = questionData.user_id;
+        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+        // Fallback to profile if auth fails or is inconsistent
+        let userEmail = userData?.user?.email;
+
+        // C. Send Email Notification
+        if (userEmail) {
+            const { getAnswerNotificationHtml } = await import('@/lib/email-templates');
+            const { sendEmail } = await import('@/lib/resend');
+
+            await sendEmail({
+                to: userEmail,
+                subject: 'Answer to your question - AC Styling',
+                html: getAnswerNotificationHtml(questionData.question, answer)
+            });
+        }
+
+        // D. Mark Admin Notification as Answered (so we know we took action)
+        // We need to find the notification linked to this question
+        const { error: notifError } = await supabaseAdmin
+            .from('admin_notifications')
+            .update({
+                status: 'actioned', // Consider it 'done' from an inbox perspective
+                action_taken: 'answered'
+            })
+            .eq('reference_id', questionId)
+            .eq('type', 'question');
+
+        if (notifError) console.error("Failed to update related notification:", notifError);
 
         return { success: true };
     } catch (e: any) {

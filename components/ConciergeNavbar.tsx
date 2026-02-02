@@ -3,6 +3,7 @@
 import { Link } from "@/i18n/routing";
 import { User } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserNotifications from "./UserNotifications";
 
 export default function ConciergeNavbar({ isGuest }: { isGuest?: boolean }) {
     return (
@@ -29,7 +30,11 @@ export default function ConciergeNavbar({ isGuest }: { isGuest?: boolean }) {
                 </Link>
 
                 {/* Right Side Actions */}
-                <div className="flex items-center space-x-6 md:space-x-8">
+                <div className="flex items-center space-x-4 md:space-x-6">
+                    <UserNotifications />
+
+                    <div className="h-4 w-px bg-ac-taupe/10 hidden md:block"></div>
+
                     <LanguageSwitcher isScrolled={true} />
 
                     <Link
