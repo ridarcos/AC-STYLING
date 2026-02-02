@@ -16,19 +16,17 @@ import ServiceForm from "./ServiceForm";
 import { toast } from "sonner";
 import { Folder, FileVideo, Plus, Users, Tag, Sparkles } from "lucide-react";
 
-import StudioInbox from "./StudioInbox";
 import AdminNotificationsPanel from "./AdminNotificationsPanel";
 import { getUnreadNotificationCount } from "@/app/actions/notifications";
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'inbox' | 'notifications' | 'masterclasses' | 'chapters' | 'clients' | 'boutique' | 'services'>('notifications');
+    const [activeTab, setActiveTab] = useState<'notifications' | 'masterclasses' | 'chapters' | 'clients' | 'boutique' | 'services'>('notifications');
 
     // Data
     const [chapters, setChapters] = useState<any[]>([]);
     const [masterclasses, setMasterclasses] = useState<any[]>([]);
     const [services, setServices] = useState<any[]>([]);
-    // Inbox Count
-    const [inboxCount, setInboxCount] = useState(0);
+
     // Notifications Count
     const [notificationsCount, setNotificationsCount] = useState(0);
 
@@ -43,21 +41,15 @@ export default function AdminDashboard() {
     const formRef = useRef<HTMLDivElement>(null);
 
     const loadData = async () => {
-        // Dynamically import to separate concerns? Or just call directly.
-        // We need getStudioInboxItems for the count.
-        const { getStudioInboxItems } = await import("@/app/actions/studio");
-
-        const [cRes, mRes, sRes, iRes] = await Promise.all([
+        const [cRes, mRes, sRes] = await Promise.all([
             getChapters(),
             getMasterclasses(),
-            getServices(),
-            getStudioInboxItems()
+            getServices()
         ]);
 
         if (cRes.success) setChapters(cRes.chapters || []);
         if (mRes.success) setMasterclasses(mRes.masterclasses || []);
         if (sRes.success) setServices(sRes.services || []);
-        if (iRes.success) setInboxCount(iRes.data?.length || 0);
 
         // Fetch notification count separately
         const notifCount = await getUnreadNotificationCount();
@@ -109,23 +101,6 @@ export default function AdminDashboard() {
             {/* Tabs */}
             <div className="flex gap-4 border-b border-ac-taupe/10 overflow-x-auto">
                 <button
-                    onClick={() => { setActiveTab('inbox'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
-                    className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'inbox'
-                        ? 'text-ac-taupe border-b-2 border-ac-gold'
-                        : 'text-ac-taupe/40 hover:text-ac-taupe/60'
-                        }`}
-                >
-                    <div className="relative">
-                        <Users size={18} className="rotate-180" /> {/* Mock Inbox Icon */}
-                        {inboxCount > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-ac-gold text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                                {inboxCount}
-                            </span>
-                        )}
-                    </div>
-                    Inbox
-                </button>
-                <button
                     onClick={() => { setActiveTab('notifications'); setIsCreating(false); setEditingItem(null); setEditingOfferSlug(null); }}
                     className={`pb-4 px-4 flex items-center gap-2 font-serif text-sm md:text-lg transition-colors whitespace-nowrap ${activeTab === 'notifications'
                         ? 'text-ac-taupe border-b-2 border-ac-gold'
@@ -149,7 +124,9 @@ export default function AdminDashboard() {
                         : 'text-ac-taupe/40 hover:text-ac-taupe/60'
                         }`}
                 >
-                    <Folder size={18} />
+                    <div className="relative">
+                        <Folder size={18} />
+                    </div>
                     Masterclasses
                 </button>
                 <button
@@ -196,7 +173,7 @@ export default function AdminDashboard() {
 
             {/* Action Bar */}
             {
-                activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'inbox' && activeTab !== 'notifications' && (
+                activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'notifications' && (
                     <div className="flex justify-end items-center">
                         <div className="flex gap-3">
                             {activeTab === 'masterclasses' && (
@@ -231,7 +208,7 @@ export default function AdminDashboard() {
 
             {/* Form Area */}
             {
-                (isCreating || editingItem || editingOfferSlug) && activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'inbox' && activeTab !== 'notifications' && (
+                (isCreating || editingItem || editingOfferSlug) && activeTab !== 'clients' && activeTab !== 'boutique' && activeTab !== 'notifications' && (
                     <div ref={formRef} className="bg-white/40 backdrop-blur-md border border-ac-gold shadow-lg rounded-sm p-8">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-serif text-xl text-ac-taupe">
@@ -271,12 +248,6 @@ export default function AdminDashboard() {
             }
 
             {/* Views */}
-            {
-                activeTab === 'inbox' && (
-                    <StudioInbox />
-                )
-            }
-
             {
                 activeTab === 'notifications' && (
                     <AdminNotificationsPanel />

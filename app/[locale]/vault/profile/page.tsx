@@ -4,6 +4,7 @@ import TailorCardUser from '@/components/vault/TailorCardUser';
 import GatedWardrobe from '@/components/vault/GatedWardrobe';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import AccountSettings from '@/components/vault/AccountSettings';
 
 async function getWardrobeItems(userId: string) {
     const supabase = await createClient();
@@ -65,8 +66,13 @@ export default async function ProfileHub() {
                 </div>
             </div>
 
+            {/* Account Settings Section */}
+            <div className="container mx-auto px-4 max-w-4xl">
+                <AccountSettings />
+            </div>
+
             {/* Disclaimer / Footer */}
-            <div className="mt-12 text-center text-[#3D3630]/40 text-[10px] uppercase tracking-widest">
+            <div className="mt-12 mb-12 text-center text-[#3D3630]/40 text-[10px] uppercase tracking-widest">
                 AC Styling • Vault Profile • ID: {profile.id.slice(0, 8)}
             </div>
         </div>
