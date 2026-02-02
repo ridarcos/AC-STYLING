@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import VaultHero from "./VaultHero";
 import { PulseContent } from "@/app/actions/dashboard";
+import SafeImage from "@/components/ui/SafeImage";
 
 interface WhatsNewProps {
     pulse?: PulseContent[] | null;
@@ -86,13 +87,10 @@ export default function WhatsNew({ pulse = [] }: WhatsNewProps) {
                             >
                                 {/* Image */}
                                 <div className="relative w-full md:w-24 h-24 flex-shrink-0 overflow-hidden rounded-sm bg-ac-taupe/5">
-                                    <img
+                                    <SafeImage
                                         src={displayItem.image_url}
                                         alt={displayItem.title}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        onError={(e) => {
-                                            e.currentTarget.src = 'https://images.unsplash.com/photo-1529139574466-a302d2052574?q=80&w=2070&auto=format&fit=crop';
-                                        }}
                                     />
                                     {(displayItem.type === 'continue' || displayItem.type === 'new_learning') && (
                                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
