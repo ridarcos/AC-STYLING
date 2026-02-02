@@ -97,7 +97,7 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                         {masterclasses.map((mc, index) => {
                             const isCompleted = isMasterclassComplete(mc.id);
                             const displayTitle = locale === 'es' && mc.title_es ? mc.title_es : mc.title;
-                            const displayDescription = locale === 'es' && mc.description_es ? mc.description_es : mc.description;
+                            const displaySubtitle = locale === 'es' && mc.subtitle_es ? mc.subtitle_es : mc.subtitle;
                             const displayThumb = mc.thumbnail_url;
 
                             // If Guest, link goes to #upgrade (or we intercept it)
@@ -152,7 +152,7 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
                                         {isGuest && <span className="text-[10px] bg-ac-taupe/10 px-2 py-0.5 rounded-sm text-ac-taupe/60 uppercase font-bold tracking-normal">Locked</span>}
                                     </h3>
                                     <p className="text-ac-taupe/60 text-xs max-w-md line-clamp-2">
-                                        {displayDescription}
+                                        {displaySubtitle}
                                     </p>
                                 </>
                             );

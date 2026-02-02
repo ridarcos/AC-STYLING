@@ -269,7 +269,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="p-6">
                                     <h3 className="font-serif text-xl text-ac-taupe mb-1">{mc.title}</h3>
-                                    <p className="text-sm text-ac-taupe/60 line-clamp-2 mb-4">{mc.description}</p>
+                                    <p className="text-sm text-ac-taupe/60 line-clamp-2 mb-4">{mc.subtitle}</p>
                                     <div className="flex justify-between items-center border-t border-ac-taupe/10 pt-4">
                                         <span className="text-xs uppercase tracking-widest text-ac-taupe/40">Includes chapters</span>
                                         <button onClick={() => handleDeleteMasterclass(mc.id, mc.title)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
