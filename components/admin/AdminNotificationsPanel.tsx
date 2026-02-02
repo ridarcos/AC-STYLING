@@ -64,7 +64,7 @@ const typeColors: Record<string, string> = {
     'general': 'bg-gray-100 text-gray-600',
 };
 
-type FilterTab = 'all' | 'sales' | 'services' | 'inbox';
+type FilterTab = 'all' | 'sales' | 'services' | 'inbox' | 'questions';
 
 export default function AdminNotificationsPanel() {
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
