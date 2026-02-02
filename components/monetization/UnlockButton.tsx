@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Unlock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { createCheckoutSession } from '@/app/actions/stripe';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -81,7 +81,7 @@ export default function UnlockButton({
                 <span className="animate-pulse">Processing...</span>
             ) : (
                 <>
-                    {!isComingSoon && <Unlock size={16} />}
+                    {!isComingSoon && <Lock size={16} />}
                     {displayLabel}
                 </>
             )}

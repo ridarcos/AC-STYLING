@@ -6,7 +6,7 @@ import { createCheckoutSession } from "@/app/actions/stripe";
 import { getOffer } from "@/app/actions/admin/manage-offers";
 import { Sparkles, X, CheckCircle2, Ticket } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 
 export default function CoursePassUnlock({ userId, hasCoursePass }: { userId?: string, hasCoursePass: boolean }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -25,9 +25,14 @@ export default function CoursePassUnlock({ userId, hasCoursePass }: { userId?: s
 
     if (!offer || hasCoursePass) return null;
 
+    const router = useRouter(); // Use next-intl router
     const handlePurchase = async () => {
         if (!userId) {
-            toast.error("Please log in to purchase");
+            // Redirect to Join page for guests
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('redirect_to', '/vault/courses');
+            }
+            router.push('/vault/join');
             return;
         }
 

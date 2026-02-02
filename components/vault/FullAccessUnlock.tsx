@@ -6,6 +6,7 @@ import { createCheckoutSession } from "@/app/actions/stripe";
 import { toast } from "sonner";
 import { Loader2, Sparkles, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "@/i18n/routing";
 
 export default function FullAccessUnlock({ userId, hasFullAccess }: { userId?: string, hasFullAccess: boolean }) {
     const [offer, setOffer] = useState<any>(null);
@@ -25,9 +26,15 @@ export default function FullAccessUnlock({ userId, hasFullAccess }: { userId?: s
     // Don't show if user already has full access or if no offer exists
     if (hasFullAccess || !offer) return null;
 
+    const router = useRouter();
+
     const handlePurchase = async () => {
         if (!userId) {
-            toast.error("Please log in to purchase.");
+            // Redirect to Join page for guests
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('redirect_to', '/vault/foundations');
+            }
+            router.push('/vault/join');
             return;
         }
 

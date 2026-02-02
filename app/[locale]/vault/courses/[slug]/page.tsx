@@ -178,25 +178,48 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                 {/* Right Column (30%) - Stacked Cards */}
                 <div className="lg:col-span-3 space-y-6">
 
-                    {/* 1. Key Takeaways */}
-                    <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm">
-                        <h3 className="font-serif text-xl text-ac-taupe mb-4 flex items-center gap-2">
-                            <CheckCircle2 size={20} className="text-ac-gold" />
-                            Key Takeaways
-                        </h3>
-                        {takeaways.length > 0 ? (
-                            <ul className="space-y-3">
-                                {takeaways.map((takeaway: string, i: number) => (
-                                    <li key={i} className="flex gap-3 text-sm text-ac-taupe/80 leading-snug">
-                                        <span className="text-ac-gold text-lg leading-none">•</span>
-                                        <span>{takeaway}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-ac-taupe/40 italic">No takeaways added yet.</p>
-                        )}
-                    </div>
+                    {hasAccess ? (
+                        <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm">
+                            <h3 className="font-serif text-xl text-ac-taupe mb-4 flex items-center gap-2">
+                                <CheckCircle2 size={20} className="text-ac-gold" />
+                                Key Takeaways
+                            </h3>
+                            {takeaways.length > 0 ? (
+                                <ul className="space-y-3">
+                                    {takeaways.map((takeaway: string, i: number) => (
+                                        <li key={i} className="flex gap-3 text-sm text-ac-taupe/80 leading-snug">
+                                            <span className="text-ac-gold text-lg leading-none">•</span>
+                                            <span>{takeaway}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-sm text-ac-taupe/40 italic">No takeaways added yet.</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm opacity-50 cursor-not-allowed select-none">
+                            <div className="blur-[2px]">
+                                <h3 className="font-serif text-xl text-ac-taupe mb-4 flex items-center gap-2">
+                                    <CheckCircle2 size={20} className="text-ac-gold" />
+                                    Key Takeaways
+                                </h3>
+                                <ul className="space-y-3">
+                                    {[1, 2, 3].map((_, i) => (
+                                        <li key={i} className="flex gap-3 text-sm text-ac-taupe/80 leading-snug">
+                                            <span className="text-ac-gold text-lg leading-none">•</span>
+                                            <span className="bg-ac-taupe/10 text-transparent rounded-sm">Hidden content for locked course</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="mt-4 text-center">
+                                <p className="text-xs text-ac-taupe/60 italic uppercase tracking-widest">
+                                    Unlock to view
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 2. Styling Essence Lab (GATED or Preview?) - Gated for now as it assumes watching */}
                     {hasAccess ? (
@@ -215,33 +238,61 @@ export default async function CourseLessonPage({ params }: { params: Promise<{ s
                     )}
 
                     {/* 3. Resources */}
-                    <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm">
-                        <h3 className="font-serif text-xl text-ac-taupe mb-4 flex items-center gap-2">
-                            <FileText size={20} className="text-ac-taupe" />
-                            Resources
-                        </h3>
-                        {resourceUrls.length > 0 ? (
-                            <div className="space-y-3">
-                                {resourceUrls.map((resource: { name: string, url: string }, i: number) => (
-                                    <a
-                                        key={i}
-                                        href={hasAccess ? resource.url : "#"} // Disable link if locked
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={`w-full flex items-center justify-between p-3 bg-white/40 border border-transparent transition-all rounded-sm group text-left ${hasAccess ? 'hover:bg-white/60 hover:border-ac-gold/20' : 'opacity-50 cursor-not-allowed'}`}
-                                        onClick={(e) => !hasAccess && e.preventDefault()}
-                                    >
-                                        <span className="text-sm font-bold text-ac-taupe group-hover:text-ac-olive truncate">
-                                            {resource.name}
-                                        </span>
-                                        {hasAccess && <Download size={14} className="text-ac-gold ml-2" />}
-                                    </a>
-                                ))}
+                    {hasAccess ? (
+                        <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm">
+                            <h3 className="font-serif text-xl text-ac-taupe mb-4 flex items-center gap-2">
+                                <FileText size={20} className="text-ac-taupe" />
+                                Resources
+                            </h3>
+                            {resourceUrls.length > 0 ? (
+                                <div className="space-y-3">
+                                    {resourceUrls.map((resource: { name: string, url: string }, i: number) => (
+                                        <a
+                                            key={i}
+                                            href={resource.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full flex items-center justify-between p-3 bg-white/40 border border-transparent transition-all rounded-sm group text-left hover:bg-white/60 hover:border-ac-gold/20"
+                                        >
+                                            <span className="text-sm font-bold text-ac-taupe group-hover:text-ac-olive truncate">
+                                                {resource.name}
+                                            </span>
+                                            <Download size={14} className="text-ac-gold ml-2" />
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-ac-taupe/40 italic">No resources available.</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-white/20 backdrop-blur-md border border-white/30 p-6 rounded-sm shadow-sm opacity-50 cursor-not-allowed select-none">
+                            <div className="blur-[2px]">
+                                <h3 className="font-serif text-xl text-ac-taupe mb-4 flex items-center gap-2">
+                                    <FileText size={20} className="text-ac-taupe" />
+                                    Resources
+                                </h3>
+                                <div className="space-y-3">
+                                    {[1, 2].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="w-full flex items-center justify-between p-3 bg-white/40 border border-transparent rounded-sm"
+                                        >
+                                            <span className="text-sm font-bold text-transparent bg-ac-taupe/10 rounded-sm">
+                                                Hidden Resource Name
+                                            </span>
+                                            <Download size={14} className="text-ac-gold/20 ml-2" />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        ) : (
-                            <p className="text-sm text-ac-taupe/40 italic">No resources available.</p>
-                        )}
-                    </div>
+                            <div className="mt-4 text-center">
+                                <p className="text-xs text-ac-taupe/60 italic uppercase tracking-widest">
+                                    Unlock to view
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </section>
