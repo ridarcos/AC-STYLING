@@ -18,7 +18,7 @@ export default async function VaultPage({ params }: { params: Promise<{ locale: 
 
     // Fetch profile and dynamic content concurrently
     const [profileRes, pulse, completion] = await Promise.all([
-        supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+        supabase.from('profiles').select('full_name, is_guest').eq('id', user.id).single(),
         getDashboardPulse(),
         getMasterclassCompletionStatus()
     ]);
@@ -52,7 +52,7 @@ export default async function VaultPage({ params }: { params: Promise<{ locale: 
 
                 {/* Sidebar: Quick Actions - Order 1 on mobile, 2 on desktop */}
                 <div className="lg:col-span-1 order-1 lg:order-2">
-                    <QuickActions isMasterclassComplete={completion.isComplete} />
+                    <QuickActions isMasterclassComplete={completion.isComplete} isGuest={profile?.is_guest || false} />
                 </div>
             </div>
 

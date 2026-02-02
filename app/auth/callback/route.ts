@@ -47,7 +47,7 @@ export async function GET(request: Request) {
                 if (pendingProfile && pendingProfile.id !== user.id) {
                     await adminSupabase.from('profiles').update({
                         full_name: pendingProfile.full_name,
-                        is_guest: false,
+                        is_guest: true, // Correctly mark as guest since they are claiming an invite
                         converted_at: new Date().toISOString(),
                         active_studio_client: true, // Enable Studio Access
                         studio_permissions: pendingProfile.studio_permissions || { lookbook: true, wardrobe: true }

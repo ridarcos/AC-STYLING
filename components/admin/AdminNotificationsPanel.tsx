@@ -90,9 +90,10 @@ export default function AdminNotificationsPanel() {
         setLoading(false);
     };
 
-    const handleMarkRead = async (id: string) => {
+    const handleMarkRead = async (id: string, type?: string) => {
         setProcessingId(id);
-        const res = await markNotificationAsRead(id);
+        // Cast type to NotificationType
+        const res = await markNotificationAsRead(id, type as any);
         if (res.success) {
             setNotifications(prev =>
                 prev.map(n => n.id === id ? { ...n, status: 'read' } : n)
@@ -103,9 +104,9 @@ export default function AdminNotificationsPanel() {
         setProcessingId(null);
     };
 
-    const handleTakeAction = async (id: string, action: string) => {
+    const handleTakeAction = async (id: string, action: string, type?: string) => {
         setProcessingId(id);
-        const res = await updateNotificationStatus(id, 'actioned', action);
+        const res = await updateNotificationStatus(id, 'actioned', action, type as any);
         if (res.success) {
             toast.success(`Marked as ${action}`);
             setNotifications(prev =>
@@ -192,7 +193,7 @@ export default function AdminNotificationsPanel() {
                     { id: 'all', label: 'All' },
                     { id: 'sales', label: 'Sales' },
                     { id: 'services', label: 'Services' },
-                    { id: 'inbox', label: 'Inbox' },
+                    { id: 'inbox', label: 'Wardrobe' },
                     { id: 'questions', label: 'Q&A' }, // Added Q&A tab
                 ].map((tab) => (
                     <button
@@ -250,8 +251,8 @@ function NotificationCard({
     isProcessing
 }: {
     notification: AdminNotification;
-    onMarkRead: (id: string) => void;
-    onTakeAction: (id: string, action: string) => void;
+    onMarkRead: (id: string, type?: string) => void;
+    onTakeAction: (id: string, action: string, type?: string) => void;
     isProcessing: boolean;
 }) {
     const [expanded, setExpanded] = useState(false);
@@ -300,7 +301,7 @@ function NotificationCard({
                 className="p-4 cursor-pointer"
                 onClick={() => {
                     setExpanded(!expanded);
-                    if (isUnread) onMarkRead(notification.id);
+                    if (isUnread) onMarkRead(notification.id, notification.type);
                 }}
             >
                 <div className="flex items-start gap-3">
@@ -391,16 +392,34 @@ function NotificationCard({
                     {!isActioned && notification.type === 'service_booking' && (
                         <div className="mt-4 flex gap-2">
                             <button
-                                onClick={(e) => { e.stopPropagation(); onTakeAction(notification.id, 'scheduled'); }}
+                                onClick={(e) => { e.stopPropagation(); onTakeAction(notification.id, 'scheduled', notification.type); }}
                                 className="flex-1 py-2 bg-ac-taupe text-white text-xs uppercase tracking-widest rounded-sm hover:bg-ac-gold transition-colors"
                             >
                                 Mark Scheduled
                             </button>
                             <button
-                                onClick={(e) => { e.stopPropagation(); onTakeAction(notification.id, 'completed'); }}
+                                onClick={(e) => { e.stopPropagation(); onTakeAction(notification.id, 'completed', notification.type); }}
                                 className="flex-1 py-2 bg-ac-olive/10 text-ac-olive text-xs uppercase tracking-widest rounded-sm hover:bg-ac-olive hover:text-white transition-colors"
                             >
                                 Mark Completed
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Wardrobe Items Actions */}
+                    {!isActioned && notification.type === 'wardrobe_item' && (
+                        <div className="mt-4 flex gap-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onMarkRead(notification.id, notification.type); }}
+                                className="flex-1 py-2 bg-ac-olive text-white text-xs uppercase tracking-widest rounded-sm hover:bg-ac-olive/90 transition-colors"
+                            >
+                                Keep/Approve
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onTakeAction(notification.id, 'donate', notification.type); }}
+                                className="flex-1 py-2 bg-ac-taupe/10 text-ac-taupe text-xs uppercase tracking-widest rounded-sm hover:bg-red-50 hover:text-red-500 transition-colors"
+                            >
+                                Donate
                             </button>
                         </div>
                     )}

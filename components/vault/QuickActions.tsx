@@ -12,9 +12,10 @@ import { useRouter } from "@/i18n/routing";
 
 interface QuickActionsProps {
     isMasterclassComplete?: boolean;
+    isGuest?: boolean;
 }
 
-export default function QuickActions({ isMasterclassComplete = false }: QuickActionsProps) {
+export default function QuickActions({ isMasterclassComplete = false, isGuest = false }: QuickActionsProps) {
     const t = useTranslations('Vault');
     const [isAskModalOpen, setIsAskModalOpen] = useState(false);
 
@@ -22,13 +23,19 @@ export default function QuickActions({ isMasterclassComplete = false }: QuickAct
         { label: t('actions.courses.label'), subtitle: t('actions.courses.subtitle'), icon: Archive, href: "/vault/courses", action: null },
         { label: t('actions.studio.label'), subtitle: t('actions.studio.subtitle'), icon: Calendar, href: "/vault/services", action: null },
         { label: t('actions.boutique.label'), subtitle: t('actions.boutique.subtitle'), icon: Tag, href: "/vault/boutique", action: null },
-        { label: t('actions.ask.label'), subtitle: t('actions.ask.subtitle'), icon: MessageCircleQuestion, href: "#", action: "ask" },
+        // Disable click for guest, maybe showing an alert or doing nothing
+        { label: t('actions.ask.label'), subtitle: isGuest ? "Locked for Guests" : t('actions.ask.subtitle'), icon: MessageCircleQuestion, href: isGuest ? "#" : "#", action: "ask", disabled: isGuest },
     ];
 
     const router = useRouter();
     const handleActionClick = async (actionType: string | null, e: React.MouseEvent) => {
         if (actionType === 'ask') {
             e.preventDefault();
+
+            if (isGuest) {
+                // Optionally show a toaster here or just do nothing
+                return;
+            }
 
             // Check auth
             const supabase = createClient();
