@@ -111,147 +111,141 @@ export default function GatedWardrobe({ isActiveClient, userId, initialItems = [
 
             {/* Grid */}
             {items.length === 0 ? (
-                <div className="flex-1 border-2 border-dashed border-ac-taupe/10 rounded-sm flex flex-col items-center justify-center min-h-[300px] text-ac-taupe/40">
-                    <p className="text-xs uppercase tracking-widest mb-4">Your wardrobe is empty.</p>
-                    <button onClick={() => setIsUploading(true)} className="text-ac-gold hover:underline text-xs">Upload your first piece</button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto max-h-[800px] pr-2 custom-scrollbar">
-                    {items.map((item) => (
-                        <div key={item.id} className="group relative aspect-[3/4] bg-white/40 rounded-sm overflow-hidden border border-white/50 hover:border-ac-gold/30 transition-all">
-                            <div className="relative w-full h-full">
-                                <NextImage
-                                    src={item.image_url}
-                                    alt="Wardrobe item"
-                                    fill
-                                    className="object-cover"
-                                    sizes="(max-width: 768px) 50vw, 33vw"
-                                />
-                            </div>
+                <div key={item.id} className="group relative aspect-[3/4] bg-white/40 rounded-sm overflow-hidden border border-white/50 hover:border-ac-gold/30 transition-all">
+                    <div className="relative w-full h-full">
+                        <NextImage
+                            src={item.image_url}
+                            alt="Wardrobe item"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 50vw, 33vw"
+                        />
+                    </div>
 
-                            {/* Status Tag */}
-                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[8px] font-bold uppercase tracking-widest text-ac-taupe shadow-sm z-10">
-                                {item.status}
-                            </div>
+                    {/* Status Tag */}
+                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[8px] font-bold uppercase tracking-widest text-ac-taupe shadow-sm z-10">
+                        {item.status}
+                    </div>
 
-                            {/* Hover Details */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end text-white z-20">
-                                <button
-                                    onClick={async (e) => {
-                                        e.preventDefault();
-                                        if (!confirm("Are you sure you want to remove this item? This cannot be undone.")) return;
+                    {/* Hover Details */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end text-white z-20">
+                        <button
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!confirm("Are you sure you want to remove this item? This cannot be undone.")) return;
 
-                                        const toastId = toast.loading("Removing item...");
-                                        // Optimistic update
-                                        const originalItems = [...items];
-                                        setItems(items.filter(i => i.id !== item.id));
+                                const toastId = toast.loading("Removing item...");
+                                // Optimistic update
+                                const originalItems = [...items];
+                                setItems(items.filter(i => i.id !== item.id));
 
-                                        const { deleteWardrobeItem } = await import("@/app/actions/studio");
-                                        const res = await deleteWardrobeItem(item.id);
+                                const { deleteWardrobeItem } = await import("@/app/actions/studio");
+                                const res = await deleteWardrobeItem(item.id);
 
-                                        if (res.success) {
-                                            toast.success("Item removed", { id: toastId });
-                                        } else {
-                                            toast.error(res.error || "Failed to remove", { id: toastId });
-                                            setItems(originalItems); // Revert
-                                        }
-                                    }}
-                                    className="absolute top-2 right-2 p-2 bg-white/20 hover:bg-red-500/80 backdrop-blur-md rounded-full text-white transition-all transform hover:scale-110"
-                                    title="Remove Item"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-
-                                <p className="text-[10px] uppercase tracking-widest font-bold mb-1">{item.category || 'Uncategorized'}</p>
-                                {item.client_note && (
-                                    <p className="text-[10px] italic opacity-80 line-clamp-2">"{item.client_note}"</p>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Upload Modal (Mobile Snapper) */}
-            <AnimatePresence>
-                {isUploading && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-ac-taupe/80 backdrop-blur-md flex items-center justify-center p-6"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white max-w-md w-full rounded-sm shadow-2xl overflow-hidden relative"
+                                if (res.success) {
+                                    toast.success("Item removed", { id: toastId });
+                                } else {
+                                    toast.error(res.error || "Failed to remove", { id: toastId });
+                                    setItems(originalItems); // Revert
+                                }
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-white/20 hover:bg-red-500/80 backdrop-blur-md rounded-full text-white transition-all transform hover:scale-110"
+                            title="Remove Item"
                         >
-                            <button onClick={() => setIsUploading(false)} className="absolute top-4 right-4 z-50 text-ac-taupe/30 hover:text-ac-taupe"><Plus className="rotate-45" size={24} /></button>
+                            <Trash2 size={14} />
+                        </button>
 
-                            <div className="p-6 bg-[#E6DED6]">
-                                <h3 className="font-serif text-2xl text-ac-taupe">Mobile Snapper</h3>
-                                <p className="text-[10px] uppercase tracking-widest text-ac-taupe/50">Quick Add to Wardrobe</p>
+                        <p className="text-[10px] uppercase tracking-widest font-bold mb-1">{item.category || 'Uncategorized'}</p>
+                        {item.client_note && (
+                            <p className="text-[10px] italic opacity-80 line-clamp-2">"{item.client_note}"</p>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+{/* Upload Modal (Mobile Snapper) */ }
+<AnimatePresence>
+    {isUploading && (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-ac-taupe/80 backdrop-blur-md flex items-center justify-center p-6"
+        >
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white max-w-md w-full rounded-sm shadow-2xl overflow-hidden relative"
+            >
+                <button onClick={() => setIsUploading(false)} className="absolute top-4 right-4 z-50 text-ac-taupe/30 hover:text-ac-taupe"><Plus className="rotate-45" size={24} /></button>
+
+                <div className="p-6 bg-[#E6DED6]">
+                    <h3 className="font-serif text-2xl text-ac-taupe">Mobile Snapper</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-ac-taupe/50">Quick Add to Wardrobe</p>
+                </div>
+
+                <div className="p-6 space-y-6">
+                    <div className="aspect-square bg-ac-taupe/5 border-2 border-dashed border-ac-taupe/10 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group hover:border-ac-gold/30 transition-colors">
+                        {uploadFile ? (
+                            <NextImage
+                                src={URL.createObjectURL(uploadFile)}
+                                alt="Preview"
+                                fill
+                                className="object-cover"
+                                unoptimized
+                            />
+                        ) : (
+                            <div className="text-center">
+                                <Camera size={24} className="text-ac-taupe/20 mx-auto mb-2" />
+                                <span className="text-[9px] uppercase font-bold tracking-widest text-ac-taupe/40">Tap to Snap or Upload</span>
                             </div>
+                        )}
+                        <input type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
+                    </div>
 
-                            <div className="p-6 space-y-6">
-                                <div className="aspect-square bg-ac-taupe/5 border-2 border-dashed border-ac-taupe/10 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group hover:border-ac-gold/30 transition-colors">
-                                    {uploadFile ? (
-                                        <NextImage
-                                            src={URL.createObjectURL(uploadFile)}
-                                            alt="Preview"
-                                            fill
-                                            className="object-cover"
-                                            unoptimized
-                                        />
-                                    ) : (
-                                        <div className="text-center">
-                                            <Camera size={24} className="text-ac-taupe/20 mx-auto mb-2" />
-                                            <span className="text-[9px] uppercase font-bold tracking-widest text-ac-taupe/40">Tap to Snap or Upload</span>
-                                        </div>
-                                    )}
-                                    <input type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
-                                </div>
+                    <textarea
+                        value={clientNote}
+                        onChange={(e) => setClientNote(e.target.value)}
+                        placeholder="Any specific questions about this item?"
+                        className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold h-20 resize-none"
+                    />
 
-                                <textarea
-                                    value={clientNote}
-                                    onChange={(e) => setClientNote(e.target.value)}
-                                    placeholder="Any specific questions about this item?"
-                                    className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold h-20 resize-none"
-                                />
+                    {/* Category Selection */}
+                    <div>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-ac-taupe/40 block mb-2">Category (Optional)</label>
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold appearance-none"
+                        >
+                            <option value="Uncategorized">Select a Category...</option>
+                            <option value="Tops">Tops</option>
+                            <option value="Bottoms">Bottoms</option>
+                            <option value="Dresses">Dresses</option>
+                            <option value="Outerwear">Outerwear</option>
+                            <option value="Shoes">Shoes</option>
+                            <option value="Bags">Bags</option>
+                            <option value="Accessories">Accessories</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div> {/* This div closes the p-6 space-y-6 block */}
 
-                                {/* Category Selection */}
-                                <div>
-                                    <label className="text-[9px] uppercase font-bold tracking-widest text-ac-taupe/40 block mb-2">Category (Optional)</label>
-                                    <select
-                                        value={category}
-                                        onChange={(e) => setCategory(e.target.value)}
-                                        className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm text-ac-taupe focus:outline-none focus:border-ac-gold appearance-none"
-                                    >
-                                        <option value="Uncategorized">Select a Category...</option>
-                                        <option value="Tops">Tops</option>
-                                        <option value="Bottoms">Bottoms</option>
-                                        <option value="Dresses">Dresses</option>
-                                        <option value="Outerwear">Outerwear</option>
-                                        <option value="Shoes">Shoes</option>
-                                        <option value="Bags">Bags</option>
-                                        <option value="Accessories">Accessories</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div> {/* This div closes the p-6 space-y-6 block */}
-
-                            <button
-                                onClick={handleUpload}
-                                disabled={!uploadFile || isSaving}
-                                className="w-full bg-ac-gold text-white py-4 rounded-sm font-bold uppercase tracking-widest text-xs disabled:opacity-50 hover:bg-ac-taupe transition-colors flex justify-center items-center gap-2"
-                            >
-                                {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
-                                Add to Wardrobe
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                <button
+                    onClick={handleUpload}
+                    disabled={!uploadFile || isSaving}
+                    className="w-full bg-ac-gold text-white py-4 rounded-sm font-bold uppercase tracking-widest text-xs disabled:opacity-50 hover:bg-ac-taupe transition-colors flex justify-center items-center gap-2"
+                >
+                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
+                    Add to Wardrobe
+                </button>
+            </motion.div>
+        </motion.div>
+    )}
+</AnimatePresence>
         </div >
     );
 }

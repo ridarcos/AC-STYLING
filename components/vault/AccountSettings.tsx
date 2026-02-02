@@ -45,9 +45,9 @@ export default function AccountSettings() {
             <div className="flex flex-col gap-4 items-start">
                 <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-2 text-ac-taupe hover:text-ac-gold transition-colors text-sm uppercase tracking-widest font-bold"
+                    className="flex items-center gap-2 bg-ac-taupe text-white px-6 py-3 rounded-sm text-[10px] uppercase tracking-widest font-bold hover:bg-ac-taupe/90 transition-colors shadow-sm"
                 >
-                    <LogOut size={16} />
+                    <LogOut size={14} />
                     Sign Out
                 </button>
 
