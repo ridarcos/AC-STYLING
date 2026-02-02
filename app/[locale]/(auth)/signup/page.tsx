@@ -44,7 +44,7 @@ export default function SignupPage() {
 
         // Use custom action to ensure Branded Email via Resend
         const { signUpWithMagicLink } = await import('@/app/actions/auth');
-        const result = await signUpWithMagicLink(email);
+        const result = await signUpWithMagicLink(email, nextUrl ?? undefined);
 
         if (result.error) {
             setMessage("Error: " + result.error);

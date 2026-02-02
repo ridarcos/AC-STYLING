@@ -81,7 +81,7 @@ export default function LoginPage() {
         if (loginMethod === 'magic') {
             // Import and use Server Action for Branded Magic Link
             const { signInWithMagicLink } = await import('@/app/actions/auth');
-            const result = await signInWithMagicLink(email);
+            const result = await signInWithMagicLink(email, nextUrl ?? undefined);
 
             if (result.error) {
                 setMessage(result.error);
