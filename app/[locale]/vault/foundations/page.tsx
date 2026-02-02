@@ -92,10 +92,6 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
             {/* MASTERCLASSES GRID */}
             {masterclasses && masterclasses.length > 0 && (
                 <div className="mb-12">
-                    <h2 className="font-serif text-xl text-ac-taupe mb-6 flex items-center gap-2">
-                        <Layers size={20} className="text-ac-gold" />
-                        {t('collections')}
-                    </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {masterclasses.map((mc, index) => {
