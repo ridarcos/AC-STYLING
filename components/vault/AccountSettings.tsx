@@ -39,7 +39,7 @@ export default function AccountSettings() {
     };
 
     return (
-        <div className="mt-12 py-8 border-t border-ac-taupe/10">
+        <div className="mt-12 py-8">
             <h3 className="font-serif text-xl text-ac-taupe mb-6">Account Settings</h3>
 
             <div className="flex flex-col gap-4 items-start">
