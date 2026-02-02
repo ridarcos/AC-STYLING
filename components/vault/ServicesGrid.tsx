@@ -80,6 +80,7 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
             return;
         }
 
+        // ... (rest of handleCheckout logic)
         const toastId = toast.loading("Securely redirecting to Stripe...");
 
         try {
@@ -94,6 +95,7 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
 
     return (
         <div className="space-y-8">
+            {/* ... (Success Modal and Retainer Service - unchanged) ... */}
             {/* Success Modal */}
             {showSuccess && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -216,7 +218,7 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
                     initial="hidden"
                     whileInView="show"
                     viewport={{ once: true, margin: "0px" }}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr"
                 >
                     {sessionServices.map((service) => {
                         const isRecommended = service.id === recommendedServiceId;
@@ -226,14 +228,13 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
                                 key={service.id}
                                 onClick={() => handleCheckout(service.price_id || '')}
                                 variants={cardVariants}
-                                className={`group relative flex flex-col bg-white/40 backdrop-blur-md rounded-sm overflow-hidden border transition-all duration-500 hover:shadow-lg cursor-pointer ${isRecommended
+                                className={`group relative flex flex-col bg-white/40 backdrop-blur-md rounded-sm overflow-visible border transition-all duration-500 hover:shadow-lg cursor-pointer h-full ${isRecommended
                                     ? 'border-ac-gold shadow-md ring-1 ring-ac-gold/20 z-10'
                                     : 'border-white/30 hover:border-ac-taupe/20'
                                     }`}
-                                style={{ height: '280px' }} // Forced compact height
                             >
-                                {/* Compact Layout: Image Top (45%), Content Bottom (55%) */}
-                                <div className="h-[45%] overflow-hidden relative bg-ac-taupe/10">
+                                {/* Flexible Layout: Image fixed height, Content grows */}
+                                <div className="h-64 overflow-hidden relative bg-ac-taupe/10 flex-shrink-0">
                                     {service.image_url ? (
                                         <img
                                             src={service.image_url}
@@ -258,28 +259,28 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
                                     )}
                                 </div>
 
-                                <div className="p-5 flex flex-col flex-1 relative">
-                                    <div className="mb-2">
-                                        <h3 className="font-serif text-xl text-ac-taupe leading-none transition-colors group-hover:text-ac-olive truncate">
+                                <div className="p-6 flex flex-col flex-1 relative">
+                                    <div className="mb-4">
+                                        <h3 className="font-serif text-xl md:text-2xl text-ac-taupe leading-tight transition-colors group-hover:text-ac-olive mb-1">
                                             {service.title}
                                         </h3>
                                         {service.subtitle && (
-                                            <p className="font-serif text-ac-taupe/60 italic text-xs mt-1 truncate">
+                                            <p className="font-serif text-ac-taupe/60 italic text-xs">
                                                 {service.subtitle}
                                             </p>
                                         )}
                                     </div>
 
-                                    <div className="h-px w-6 bg-ac-taupe/20 my-2 group-hover:w-full transition-all duration-700" />
+                                    <div className="h-px w-6 bg-ac-taupe/20 mb-4 group-hover:w-full transition-all duration-700" />
 
-                                    <p className="font-sans text-ac-taupe/80 text-[11px] leading-relaxed line-clamp-2 mb-2 flex-1">
+                                    <div className="font-sans text-ac-taupe/80 text-xs leading-relaxed whitespace-pre-wrap flex-1 mb-6">
                                         {service.description}
-                                    </p>
+                                    </div>
 
-                                    <div className="flex items-center justify-between mt-auto">
+                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-ac-taupe/10">
 
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] uppercase tracking-widest text-ac-taupe/40 group-hover:text-ac-gold transition-opacity">
+                                            <span className="text-[10px] uppercase tracking-widest text-ac-taupe/40 group-hover:text-ac-gold transition-opacity decoration-clone">
                                                 {t('secure_session')}
                                             </span>
                                             <ArrowUpRight size={14} className="text-ac-taupe/40 group-hover:text-ac-gold group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
