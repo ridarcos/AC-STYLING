@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Check, X } from "lucide-react";
+import { useRouter } from "@/i18n/routing";
 
 interface Service {
     id: string;
@@ -26,6 +27,7 @@ interface ServicesGridProps {
     retainerService?: Service;
     recommendedServiceId: string | null;
     recommendationReason?: string;
+    isGuest?: boolean;
 }
 
 const retainerVariants: Variants = {
@@ -49,10 +51,11 @@ const cardVariants: Variants = {
     show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
 };
 
-export default function ServicesGrid({ sessionServices, retainerService, recommendedServiceId, recommendationReason }: ServicesGridProps) {
+export default function ServicesGrid({ sessionServices, retainerService, recommendedServiceId, recommendationReason, isGuest }: ServicesGridProps) {
     const t = useTranslations('Studio');
     const searchParams = useSearchParams();
     const [showSuccess, setShowSuccess] = useState(false);
+    const router = useRouter();
 
     useEffect(() => {
         if (searchParams.get('checkout_success')) {
@@ -64,6 +67,14 @@ export default function ServicesGrid({ sessionServices, retainerService, recomme
     }, [searchParams]);
 
     const handleCheckout = async (priceId: string) => {
+        if (isGuest) {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('redirect_to', '/vault/services');
+            }
+            router.push('/vault/join');
+            return;
+        }
+
         if (!priceId) {
             toast.error("Configuration Error: Missing Price ID");
             return;

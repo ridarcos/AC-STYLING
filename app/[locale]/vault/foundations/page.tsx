@@ -87,7 +87,7 @@ export default async function FoundationsPage({ params }: { params: Promise<{ lo
             </div>
 
             {/* FULL ACCESS UNLOCK BANNER */}
-            <FullAccessUnlock userId={user?.id} hasFullAccess={hasFullAccess} />
+            <FullAccessUnlock userId={!isGuest ? user?.id : undefined} hasFullAccess={hasFullAccess} />
 
             {/* MASTERCLASSES GRID */}
             {masterclasses && masterclasses.length > 0 && (

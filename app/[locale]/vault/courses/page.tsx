@@ -66,7 +66,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ locale
 
             {/* Course Pass Banner */}
             <div className="mb-8">
-                <CoursePassUnlock userId={user?.id} hasCoursePass={hasCourseAccess} />
+                <CoursePassUnlock userId={user && !user.is_anonymous ? user.id : undefined} hasCoursePass={hasCourseAccess} />
             </div>
 
             {/* STANDALONE CHAPTERS GRID */}
