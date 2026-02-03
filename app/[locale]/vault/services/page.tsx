@@ -102,14 +102,14 @@ export default async function ServicesPage({ params }: { params: { locale: strin
                         <p className="text-[10px] uppercase tracking-widest font-bold text-ac-gold mb-3">Private Access</p>
                         <h2 className="font-serif text-3xl text-ac-taupe mb-3">Welcome back, {userName || 'Client'}</h2>
                         <p className="text-ac-taupe/60 text-xs italic mb-8 max-w-md mx-auto leading-relaxed">
-                            Your personal studio is ready. Review your lookbooks, manage your virtual wardrobe, and check your tailor card.
+                            Your personal studio is ready. Review your lookbooks, manage your virtual wardrobe, and collaborate with your stylist.
                         </p>
 
                         <Link
                             href="/vault/my-studio"
                             className="inline-flex items-center gap-3 bg-ac-taupe text-white px-8 py-3 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-ac-gold transition-colors shadow-lg z-10 relative group-hover:translate-x-1 duration-300"
                         >
-                            Enter VIP Room
+                            Enter My Studio
                             <ArrowRight size={14} />
                         </Link>
                     </div>
