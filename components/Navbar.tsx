@@ -54,8 +54,7 @@ export default function Navbar() {
                         : "bg-transparent py-6 text-white"
                 )}
             >
-                <div className="container mx-auto px-6 md:px-12 flex justify-between items-center">
-                    {/* Logo */}
+                <div className="container mx-auto px-6 md:px-12 flex justify-between items-center relative">
                     {/* Logo */}
                     <Link href="/" className="z-50 relative group flex items-center gap-4">
                         <div
@@ -75,6 +74,19 @@ export default function Navbar() {
                             AC Styling
                         </span>
                     </Link>
+
+                    {/* Center Button - Desktop & Tablet */}
+                    <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:block">
+                        <Link
+                            href="/vault"
+                            className={cn(
+                                "font-serif text-lg tracking-wider transition-colors duration-300 border-b-transparent border-b hover:border-current py-1",
+                                isScrolled ? "text-ac-taupe border-ac-taupe/20" : "text-white border-white/20"
+                            )}
+                        >
+                            AC Styling Lab
+                        </Link>
+                    </div>
 
                     {/* Desktop Menu */}
                     <div className="hidden md:flex space-x-8 items-center">
@@ -135,6 +147,19 @@ export default function Navbar() {
                                     {link.name}
                                 </motion.a>
                             ))}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 * navLinks.length, duration: 0.5 }}
+                            >
+                                <Link
+                                    href="/vault"
+                                    className="font-serif text-4xl hover:text-ac-beige transition-colors italic"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    AC Styling Lab
+                                </Link>
+                            </motion.div>
                             <div className="pt-8">
                                 <LanguageSwitcher isScrolled={false} />
                             </div>
