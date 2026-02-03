@@ -75,8 +75,8 @@ export default function Navbar() {
                         </span>
                     </Link>
 
-                    {/* Center Button - Desktop & Tablet */}
-                    <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:block">
+                    {/* Center Button - Desktop & Tablet - REMOVED */}
+                    {/* <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:block">
                         <Link
                             href="/vault"
                             className={cn(
@@ -86,7 +86,7 @@ export default function Navbar() {
                         >
                             AC Styling Lab
                         </Link>
-                    </div>
+                    </div> */}
 
                     {/* Desktop Menu */}
                     <div className="hidden md:flex space-x-8 items-center">
@@ -147,7 +147,7 @@ export default function Navbar() {
                                     {link.name}
                                 </motion.a>
                             ))}
-                            <motion.div
+                            {/* <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 * navLinks.length, duration: 0.5 }}
@@ -159,7 +159,7 @@ export default function Navbar() {
                                 >
                                     AC Styling Lab
                                 </Link>
-                            </motion.div>
+                            </motion.div> */}
                             <div className="pt-8">
                                 <LanguageSwitcher isScrolled={false} />
                             </div>
