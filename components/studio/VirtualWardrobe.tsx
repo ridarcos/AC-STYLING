@@ -10,12 +10,13 @@ import { extractUrlMetadata } from "@/app/actions/scraper";
 
 interface VirtualWardrobeProps {
     clientId: string;
+    isClientView?: boolean;
 }
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Shoes', 'Accessories', 'Bags'];
 const STATUSES = ['Keep', 'Tailor', 'Donate', 'Archive'];
 
-export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
+export default function VirtualWardrobe({ clientId, isClientView = false }: VirtualWardrobeProps) {
     const [items, setItems] = useState<any[]>([]);
     const [boutiqueItems, setBoutiqueItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,16 +63,17 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
 
             setBoutiqueItems(boutiqueRes.data || []);
 
-            // Allow cloning to other profiles (fetch list if admin)
-            // Ideally this should be passed as prop or fetched from a context, but quick fetch here for now
-            const { data: clients } = await supabase.from('profiles').select('id, full_name').neq('id', clientId);
-            setAllClients(clients || []);
+            // Allow cloning to other profiles (only if NOT client view)
+            if (!isClientView) {
+                const { data: clients } = await supabase.from('profiles').select('id, full_name').neq('id', clientId);
+                setAllClients(clients || []);
+            }
 
             setLoading(false);
         }
 
         loadData();
-    }, [clientId, supabase]);
+    }, [clientId, supabase, isClientView]);
 
     const handleUpdateItem = async (itemId: string, updates: any) => {
         const { error } = await supabase
@@ -220,25 +222,32 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                         <h3 className="font-serif text-2xl text-ac-taupe">Item Profile</h3>
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-ac-taupe/30">Curation Details</p>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setIsCloning(true)}
-                                            className="p-2 text-ac-taupe/20 hover:text-ac-gold transition-colors"
-                                            title="Clone Item"
-                                        >
-                                            <Copy size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteItem(selectedItem.id)}
-                                            className="p-2 text-ac-taupe/20 hover:text-red-400 transition-colors"
-                                            title="Delete Item"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                    {!isClientView && (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setIsCloning(true)}
+                                                className="p-2 text-ac-taupe/20 hover:text-ac-gold transition-colors"
+                                                title="Clone Item"
+                                            >
+                                                <Copy size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteItem(selectedItem.id)}
+                                                className="p-2 text-ac-taupe/20 hover:text-red-400 transition-colors"
+                                                title="Delete Item"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                            <button onClick={() => setSelectedItem(null)} className="p-2 text-ac-taupe/20 hover:text-ac-taupe transition-colors">
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    {isClientView && (
                                         <button onClick={() => setSelectedItem(null)} className="p-2 text-ac-taupe/20 hover:text-ac-taupe transition-colors">
                                             <X size={20} />
                                         </button>
-                                    </div>
+                                    )}
                                 </div>
 
                                 <div className="aspect-[3/4] w-full bg-ac-taupe/5 rounded-sm overflow-hidden border border-ac-taupe/10 relative group">
@@ -271,15 +280,20 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                         </div>
                                     </div>
 
-                                    {/* Status */}
+                                    {/* Status - Read Only for Client */}
                                     <div>
                                         <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-3">Curation Status</label>
                                         <div className="flex flex-wrap gap-2">
                                             {STATUSES.map(stat => (
                                                 <button
                                                     key={stat}
-                                                    onClick={() => handleUpdateItem(selectedItem.id, { status: stat })}
-                                                    className={`px-3 py-1 rounded-sm text-[10px] uppercase font-bold tracking-tighter border transition-all ${selectedItem.status === stat ? 'bg-ac-gold text-white border-ac-gold' : 'border-ac-taupe/10 text-ac-taupe/60'}`}
+                                                    onClick={() => !isClientView && handleUpdateItem(selectedItem.id, { status: stat })}
+                                                    disabled={isClientView}
+                                                    className={`
+                                                        px-3 py-1 rounded-sm text-[10px] uppercase font-bold tracking-tighter border transition-all 
+                                                        ${selectedItem.status === stat ? 'bg-ac-gold text-white border-ac-gold' : 'border-ac-taupe/10 text-ac-taupe/60'}
+                                                        ${isClientView ? 'opacity-80 cursor-default' : ''}
+                                                    `}
                                                 >
                                                     {stat}
                                                 </button>
@@ -321,42 +335,67 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                                 <MessageSquare size={12} className="text-ac-taupe/40" />
                                                 <label className="text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40">Client Note</label>
                                             </div>
-                                            <p className="bg-ac-taupe/5 p-3 rounded-sm text-[11px] text-ac-taupe italic leading-relaxed">
-                                                {selectedItem.client_note || "No client notes available."}
-                                            </p>
+                                            <textarea
+                                                value={selectedItem.client_note || ""}
+                                                onChange={(e) => handleUpdateItem(selectedItem.id, { client_note: e.target.value })}
+                                                placeholder="Add your notes here..."
+                                                className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-[11px] text-ac-taupe placeholder:text-ac-taupe/40 focus:outline-none focus:border-ac-gold transition-all resize-none h-24"
+                                            />
                                         </div>
 
                                         <div>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Briefcase size={12} className="text-ac-gold" />
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-ac-gold">Ale&apos;s Private Note</label>
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-ac-gold">
+                                                    {isClientView ? "Stylist Note" : "Ale's Private Note"}
+                                                </label>
                                             </div>
-                                            <textarea
-                                                value={selectedItem.notes || ""}
-                                                onChange={(e) => handleUpdateItem(selectedItem.id, { notes: e.target.value })}
-                                                placeholder="Notes visible only to you..."
-                                                className="w-full bg-white/40 border border-ac-gold/20 rounded-sm p-3 text-[11px] text-ac-taupe placeholder:text-ac-gold/20 focus:outline-none focus:border-ac-gold transition-all resize-none h-24"
-                                            />
+                                            {isClientView ? (
+                                                <div className="bg-ac-gold/5 border border-ac-gold/10 p-3 rounded-sm text-[11px] text-ac-taupe min-h-[60px]">
+                                                    {selectedItem.notes || <span className="text-ac-taupe/30 italic">No notes from your stylist yet.</span>}
+                                                </div>
+                                            ) : (
+                                                <textarea
+                                                    value={selectedItem.notes || ""}
+                                                    onChange={(e) => handleUpdateItem(selectedItem.id, { notes: e.target.value })}
+                                                    placeholder="Notes visible only to you..."
+                                                    className="w-full bg-white/40 border border-ac-gold/20 rounded-sm p-3 text-[11px] text-ac-taupe placeholder:text-ac-gold/20 focus:outline-none focus:border-ac-gold transition-all resize-none h-24"
+                                                />
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Boutique Hook */}
-                                    <div className="pt-4 border-t border-ac-taupe/10">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <ShoppingBag size={12} className="text-ac-olive" />
-                                            <label className="text-[10px] font-bold uppercase tracking-widest text-ac-olive">Boutique Integration</label>
+                                    {/* Boutique Hook - Read Only / Hidden for Client */}
+                                    {!isClientView && (
+                                        <div className="pt-4 border-t border-ac-taupe/10">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <ShoppingBag size={12} className="text-ac-olive" />
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-ac-olive">Boutique Integration</label>
+                                            </div>
+                                            <select
+                                                value={selectedItem.product_link_id || ""}
+                                                onChange={(e) => handleUpdateItem(selectedItem.id, { product_link_id: e.target.value || null })}
+                                                className="w-full bg-ac-olive/5 border border-ac-olive/20 rounded-sm p-2 text-[10px] text-ac-taupe focus:outline-none"
+                                            >
+                                                <option value="">No linked product</option>
+                                                {boutiqueItems.map(bi => (
+                                                    <option key={bi.id} value={bi.id}>{bi.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
-                                        <select
-                                            value={selectedItem.product_link_id || ""}
-                                            onChange={(e) => handleUpdateItem(selectedItem.id, { product_link_id: e.target.value || null })}
-                                            className="w-full bg-ac-olive/5 border border-ac-olive/20 rounded-sm p-2 text-[10px] text-ac-taupe focus:outline-none"
-                                        >
-                                            <option value="">No linked product</option>
-                                            {boutiqueItems.map(bi => (
-                                                <option key={bi.id} value={bi.id}>{bi.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    )}
+                                    {isClientView && selectedItem.product_link_id && (
+                                        <div className="pt-4 border-t border-ac-taupe/10">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <ShoppingBag size={12} className="text-ac-olive" />
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-ac-olive">Shop This Look</label>
+                                            </div>
+                                            <div className="bg-ac-olive/5 border border-ac-olive/10 p-3 rounded-sm text-xs text-ac-taupe flex justify-between items-center">
+                                                <span>{boutiqueItems.find(b => b.id === selectedItem.product_link_id)?.name || 'Linked Product'}</span>
+                                                <ExternalLink size={14} className="text-ac-olive" />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         ) : (
@@ -802,52 +841,57 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                                                         .from('studio-wardrobe')
                                                         .getPublicUrl(`${clientId}/${fileName}`);
 
+                                                    // Update DB
                                                     await handleUpdateItem(selectedItem.id, { image_url: publicUrl });
-                                                    toast.success("Image updated successfully");
                                                     setIsUpdatingImage(false);
                                                     setUpdateFile(null);
+                                                    toast.success("Image Updated");
                                                 } catch (err: any) {
-                                                    toast.error("Failed to update image");
+                                                    toast.error("Error: " + err.message);
                                                 } finally {
                                                     setIsSaving(false);
                                                 }
                                             }}
-                                            disabled={isSaving || !updateFile}
-                                            className="w-full bg-ac-gold text-white py-3 rounded-sm font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-ac-taupe transition-all disabled:opacity-50"
+                                            disabled={isSaving}
+                                            className="w-full bg-ac-gold text-white py-3 rounded-sm font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                                         >
                                             {isSaving ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-                                            Save Changes
+                                            Save Upload
                                         </button>
                                     </div>
                                 )}
 
                                 {updateImageMode === 'link' && (
                                     <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">New Image URL</label>
-                                            <input
-                                                type="text"
-                                                placeholder="https://..."
-                                                value={updateImageUrl}
-                                                onChange={(e) => setUpdateImageUrl(e.target.value)}
-                                                className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold"
-                                            />
+                                        <input
+                                            type="text"
+                                            placeholder="https://..."
+                                            value={updateImageUrl}
+                                            onChange={(e) => setUpdateImageUrl(e.target.value)}
+                                            className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold"
+                                        />
+                                        <div className="aspect-square bg-ac-taupe/5 rounded-sm overflow-hidden flex items-center justify-center">
+                                            {updateImageUrl ? (
+                                                <img src={updateImageUrl} className="w-full h-full object-contain" alt="" />
+                                            ) : (
+                                                <ImageIcon size={24} className="text-ac-taupe/10" />
+                                            )}
                                         </div>
                                         <button
                                             onClick={async () => {
-                                                if (!updateImageUrl) return toast.error("URL is required");
+                                                if (!updateImageUrl) return toast.error("Please enter a URL");
                                                 setIsSaving(true);
                                                 await handleUpdateItem(selectedItem.id, { image_url: updateImageUrl });
-                                                toast.success("Image updated successfully");
                                                 setIsUpdatingImage(false);
                                                 setUpdateImageUrl("");
+                                                toast.success("Image Updated");
                                                 setIsSaving(false);
                                             }}
-                                            disabled={isSaving || !updateImageUrl}
-                                            className="w-full bg-ac-gold text-white py-3 rounded-sm font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-ac-taupe transition-all disabled:opacity-50"
+                                            disabled={isSaving}
+                                            className="w-full bg-ac-gold text-white py-3 rounded-sm font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                                         >
                                             {isSaving ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-                                            Save Changes
+                                            Save Link
                                         </button>
                                     </div>
                                 )}
@@ -857,9 +901,9 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                 )}
             </AnimatePresence>
 
-            {/* Clone Item Modal */}
+            {/* Clone Modal */}
             <AnimatePresence>
-                {isCloning && selectedItem && (
+                {isCloning && selectedItem && !isClientView && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -872,53 +916,35 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
                             className="bg-white max-w-md w-full rounded-sm shadow-xl overflow-hidden relative"
                         >
                             <button
-                                onClick={() => {
-                                    setIsCloning(false);
-                                    setTargetClient("");
-                                }}
+                                onClick={() => { setIsCloning(false); setTargetClient(""); }}
                                 className="absolute top-4 right-4 z-50 text-ac-taupe/40 hover:text-ac-taupe transition-colors"
                             >
                                 <X size={20} />
                             </button>
-
                             <div className="p-6 border-b border-ac-taupe/10">
-                                <h3 className="font-serif text-xl text-ac-taupe">Clone to Client</h3>
-                                <p className="text-[10px] uppercase tracking-widest text-ac-taupe/40 font-bold mt-1">Copy this item to another wardrobe</p>
+                                <h3 className="font-serif text-xl text-ac-taupe">Clone Item</h3>
                             </div>
-
                             <div className="p-6 space-y-6">
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">Select Target Client</label>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-ac-taupe/40 mb-2">Target Client</label>
                                     <select
                                         value={targetClient}
                                         onChange={(e) => setTargetClient(e.target.value)}
                                         className="w-full bg-ac-taupe/5 border border-ac-taupe/10 rounded-sm p-3 text-sm focus:outline-none focus:border-ac-gold"
                                     >
-                                        <option value="">-- Choose Client --</option>
+                                        <option value="">-- Select Client --</option>
                                         {allClients.map(client => (
-                                            <option key={client.id} value={client.id}>
-                                                {client.full_name || 'Unnamed Client'}
-                                            </option>
+                                            <option key={client.id} value={client.id}>{client.full_name || 'Unnamed'}</option>
                                         ))}
                                     </select>
                                 </div>
-
-                                <div className="flex items-center gap-4 bg-ac-taupe/5 p-4 rounded-sm">
-                                    <div className="w-12 h-16 bg-white rounded-sm overflow-hidden flex-shrink-0">
-                                        <img src={selectedItem.image_url} className="w-full h-full object-cover" alt="" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-ac-taupe">{selectedItem.category}</p>
-                                        <p className="text-[10px] text-ac-taupe/60 truncate max-w-[200px]">{selectedItem.internal_note || 'No notes'}</p>
-                                    </div>
-                                </div>
-
                                 <button
                                     onClick={handleCloneItem}
                                     disabled={isSaving || !targetClient}
                                     className="w-full bg-ac-gold text-white py-3 rounded-sm font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-ac-taupe transition-all disabled:opacity-50"
                                 >
-                                    {isSaving ? <Loader2 className="animate-spin" size={14} /> : <div className="flex items-center gap-2"><Copy size={14} /> <span>Duplicate Item</span></div>}
+                                    {isSaving ? <Loader2 className="animate-spin" size={14} /> : <Copy size={14} />}
+                                    Duplicate to Client
                                 </button>
                             </div>
                         </motion.div>
@@ -928,5 +954,3 @@ export default function VirtualWardrobe({ clientId }: VirtualWardrobeProps) {
         </div>
     );
 }
-
-

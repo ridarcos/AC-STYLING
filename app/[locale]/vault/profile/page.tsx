@@ -44,26 +44,14 @@ export default async function ProfileHub() {
                 <StyleEssence essence={essence} />
             </div>
 
-            {/* Split Grid - Adjusted for vertical compression */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:min-h-[70vh]">
+            {/* Disclaimer / Footer */}
+            <div className="mt-12 mb-8 text-center text-[#3D3630]/40 text-[10px] uppercase tracking-widest">
+                AC Styling • Vault Profile • ID: {profile.id.slice(0, 8)}
+            </div>
 
-                {/* Left: Tailor's Card (Approx 35-40%) */}
-                <div className="lg:col-span-5 h-full">
-                    <TailorCardUser
-                        initialMeasurements={tailorCard?.measurements}
-                        userId={profile.id}
-                        isActiveClient={isActiveClient}
-                    />
-                </div>
-
-                {/* Right: Gated Wardrobe (Approx 60-65%) */}
-                <div className="lg:col-span-7 h-full">
-                    <GatedWardrobe
-                        isActiveClient={isActiveClient}
-                        userId={profile.id}
-                        initialItems={wardrobeItems}
-                    />
-                </div>
+            {/* Account Settings Section */}
+            <div className="container mx-auto px-4 max-w-4xl pb-12">
+                <AccountSettings />
             </div>
 
             {/* Disclaimer / Footer */}

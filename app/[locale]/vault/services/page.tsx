@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getFlatEssenceAnswers } from "@/app/actions/essence-lab";
 import ServicesGrid from "@/components/vault/ServicesGrid";
 import { Link } from "@/i18n/routing";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles, ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 export default async function ServicesPage({ params }: { params: { locale: string } }) {
@@ -44,6 +44,19 @@ export default async function ServicesPage({ params }: { params: { locale: strin
         }
     }
 
+    // Fetch profile for VIP check
+    let isActiveClient = false;
+    let userName = "";
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('active_studio_client, full_name')
+            .eq('id', user.id)
+            .single();
+        isActiveClient = profile?.active_studio_client || false;
+        userName = profile?.full_name?.split(' ')[0] || "";
+    }
+
     // Split services
     const sessionServices = services?.filter(s => s.type === 'session').map(s => ({
         ...s,
@@ -78,6 +91,29 @@ export default async function ServicesPage({ params }: { params: { locale: strin
                         {t('subtitle')}
                     </p>
                 </div>
+
+                {/* VIP Entrance */}
+                {isActiveClient && (
+                    <div className="max-w-4xl mx-auto mb-16 bg-gradient-to-br from-ac-taupe/5 to-white/40 border border-ac-taupe/10 p-8 rounded-sm text-center relative overflow-hidden group hover:border-ac-gold/30 transition-all shadow-sm">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Sparkles size={150} className="text-ac-gold" strokeWidth={0.5} />
+                        </div>
+
+                        <p className="text-[10px] uppercase tracking-widest font-bold text-ac-gold mb-3">Private Access</p>
+                        <h2 className="font-serif text-3xl text-ac-taupe mb-3">Welcome back, {userName || 'Client'}</h2>
+                        <p className="text-ac-taupe/60 text-xs italic mb-8 max-w-md mx-auto leading-relaxed">
+                            Your personal studio is ready. Review your lookbooks, manage your virtual wardrobe, and check your tailor card.
+                        </p>
+
+                        <Link
+                            href="/vault/my-studio"
+                            className="inline-flex items-center gap-3 bg-ac-taupe text-white px-8 py-3 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-ac-gold transition-colors shadow-lg z-10 relative group-hover:translate-x-1 duration-300"
+                        >
+                            Enter VIP Room
+                            <ArrowRight size={14} />
+                        </Link>
+                    </div>
+                )}
 
                 {/* Main Content Area handled by Client Component */}
                 <ServicesGrid
