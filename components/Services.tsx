@@ -46,9 +46,7 @@ export default function Services() {
                     {services.map((service, index) => (
                         <motion.a
                             key={service.id}
-                            href="https://calendly.com/fashionstylist-ac/30min"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="/book"
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1, duration: 0.5 }}

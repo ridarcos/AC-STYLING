@@ -55,9 +55,7 @@ export default function Contact() {
                     </p>
 
                     <a
-                        href="https://calendly.com/fashionstylist-ac/30min"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="/book"
                         className="inline-block px-8 py-3 border border-ac-sand text-ac-sand font-sans text-xs uppercase tracking-[0.2em] hover:bg-ac-sand hover:text-ac-taupe transition-all duration-300 mb-12"
                     >
                         {t('cta')}

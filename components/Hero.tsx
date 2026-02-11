@@ -68,9 +68,7 @@ export default function Hero() {
 
                     {/* Button - Transparent with Border */}
                     <a
-                        href="https://calendly.com/fashionstylist-ac/30min"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="/book"
                         className="inline-block px-10 py-4 border border-white text-white font-sans text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all duration-300"
                     >
                         {t('cta')}
